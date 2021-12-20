@@ -1,0 +1,74 @@
+import sys
+
+### TODO use config
+reference = 'NC_045512.2.fasta'
+variants = 'variants.tsv'
+annotations = 'GCF_009858895.2_ASM985889v3_genomic.gff.gz'
+outdir = '/home/murad/Repositories/viral_annotation'
+
+rule All:
+    input:
+        f'{outdir}/snvs.bed',
+        f'{outdir}/proteins.bed',
+        f'{outdir}/amino_acid_changes.bed'
+        
+rule GetSNVRegions:
+    """
+    * load the variants sequences from tsv
+    * keep only variants that are snvs (ie 14 sequences in sliding window)
+    * output to bed format with variant nucleotide in final column
+    """
+    input:
+        variants, reference
+    output:
+        f'{outdir}/snvs.bed'
+    shell:
+        """
+        python scripts/get_snvs.py {input} | bedtools sort > {output}
+        """
+
+rule GetProteinRegions:
+    """
+    * convert relevant annotations to bed file.
+    * Ignoring ORF1ab gene(s).  Instead just keep the sub proteins
+      that come from the large polyprotein
+        - for those proteins, I will list the gene as ORF1ab
+    * other genes are fine to include
+    """
+    input:
+        annotations
+    output:
+        f'{outdir}/proteins.bed'
+    shell:
+        'python scripts/get_protein_regions.py {input} {output}'
+        
+
+# get snps
+# get relevant annotation bed regions
+
+# rewrite the codons? ... nah
+# intersect snps with annotation? maybe not
+# XX apply snps to ref
+# compare gene amino acid seq with changed seq
+# note position of change (in terms of amino acid) and
+# orig -> changed element
+
+rule GetAminoAcidChanges:
+    """
+    * applies snps to reference sequence
+    * gets amino acid sequence of ref/snp'd protiens
+    * get for each protien, note position (1-based), orig amino acid,
+      and changed amino acid (eg 1C>Q, 25N>B, ...)
+    """
+    input:
+        proteins = rules.GetProteinRegions.output,
+        snps = rules.GetSNVRegions.output,
+        ref = reference
+    output:
+        f'{outdir}/amino_acid_changes.bed'
+    shell:
+        """
+        python scripts/get_amino_acid_changes.py \\
+            {input.proteins} {input.snps} {input.ref} > {output}
+        """
+        
