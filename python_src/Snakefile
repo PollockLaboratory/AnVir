@@ -2,9 +2,9 @@ import sys
 
 ### TODO use config
 reference = 'NC_045512.2.fasta'
-variants = 'variants.tsv'
+variants = 'variants_4_5M_GT10K.tsv'
 annotations = 'GCF_009858895.2_ASM985889v3_genomic.gff.gz'
-outdir = '/home/murad/Repositories/viral_annotation'
+outdir = '/home/murad/Repositories/AnVir/output'
 
 rule All:
     input:
