@@ -13,7 +13,9 @@ from ref_sequence import RefSeq
 
 class Change:
     """
-    Simplify printing amino acid changes with this structure and repr method
+    Simplify printing amino acid or
+    nucleotide changes with this 
+    structure and repr method
     """
     def __init__(self, pos: int, ref: str, changed: str):
         self.pos = pos
@@ -28,11 +30,15 @@ if __name__ == '__main__':
     ref = sys.argv[3]
 
     ### get snp positions/bases
+    # 0-2: genomic pos
+    # 3: variant ID
+    # 4: ref nucleotide
+    # 5: variant nucleotide
     with open(snps) as f:
         changes = []
         for line in f:
             A = line.rstrip().split()
-            changes.append((int(A[1]), A[3]))
+            changes.append((int(A[1]), A[5]))
 
     ### load ref sequence and apply snps
     ref_seq = RefSeq(ref)

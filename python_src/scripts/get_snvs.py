@@ -51,6 +51,6 @@ with open(variants) as f:
             # there should be only one pair that satisfies this condition
             if pairs[1][0] - pairs[0][1] == 2:
                 region = str(pairs[0][1] + 1)
-                ref_nucleotide = ref_seq.query(region,region)
+                ref_nucleotide = ref_seq.query(int(region),int(region))
                 print('\t'.join([contig, region, region,
                                  variant_id, ref_nucleotide, variant]))
