@@ -9,7 +9,7 @@ from Bio.Seq import translate
 def sliding_window(iterable, n):
     """
     sliding_window('ABCDEFG', 4) -> ABCD BCDE CDEF DEFG
-    Taken from python intertools example docs
+    Taken from python itertools example docs
     """
     it = iter(iterable)
     window = deque(islice(it, n), maxlen=n)
