@@ -2,7 +2,7 @@ import sys
 
 ### TODO use config
 reference = 'NC_045512.2.fasta'
-variants = 'variants_4_5M_GT10K.tsv'
+variants = 'variants7M_3500Mline_7.64Mgenomes_min100.tsv'
 annotations = 'GCF_009858895.2_ASM985889v3_genomic.gff.gz'
 outdir = '/home/murad/Repositories/AnVir/output'
 
