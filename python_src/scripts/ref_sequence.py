@@ -71,14 +71,28 @@ class RefSeq:
         self.fasta = [f.rstrip() for f in open(reference).readlines()[1:]]
         self.fasta = ''.join(self.fasta)
 
-    def query(self, start: int, end: int) -> str:
+    def query(self, start: int, end: int,
+              change: tuple[tuple[int, int], str]=None) -> str:
         """
-        make a 1-based interval query of the fasta
+        make a 1-based closed interval query of the fasta.
+        optionally apply change (closed interval) to returned
+        query sequence (non-mutating).
         """
+
+        if change:
+            f = list(self.fasta[start-1:end])
+            cs = change[0][0] - start
+            ce = change[0][1] - start
+            if len(change[1]) != (ce - cs + 1):
+                raise ValueError("change interval != change string")
+            f[cs:ce+1] = change[1]
+            return ''.join(f)
         return self.fasta[start-1:end]
+            
 
     def apply_changes(self, changes: list[tuple[int, str]]) -> None:
         """
+        **This method mutates the reference data structure**
         given a list of genomic (1-based) positions
         and their changed bases, apply changes accross the ref
         """

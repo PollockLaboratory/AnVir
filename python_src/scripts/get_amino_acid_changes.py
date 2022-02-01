@@ -35,15 +35,15 @@ if __name__ == '__main__':
     # 4: ref nucleotide
     # 5: variant nucleotide
     with open(snps) as f:
-        changes = []
+        snp_changes = []
         for line in f:
             A = line.rstrip().split()
-            changes.append((int(A[1]), A[5]))
+            snp_changes.append((int(A[1]), A[5]))
 
     ### load ref sequence and apply snps
     ref_seq = RefSeq(ref)
     changed_seq = deepcopy(ref_seq)
-    changed_seq.apply_changes(changes)
+    changed_seq.apply_changes(snp_changes)
 
     ### get the amino acid changes and annotate at each protein region
     # for each prot region:

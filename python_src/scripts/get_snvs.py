@@ -22,11 +22,12 @@ with open(variants) as f:
     # the rest are the "deviants"
     for i in range(2): next(f) # skip header lines
     for line in f:
-
-        variant_id = line.rstrip().split()[0]
+        A = line.rstrip().split()
+        variant_id = A[0]
+        count = A[2]
 
         # cols 5 (0-based) through N contain prev/next/deviants
-        seqs = line.rstrip().split()[5:]
+        seqs = A[5:]
 
         # not snv (prev+next+#deviants) - so for 14-mers 16 signifies snv
         if len(seqs) != 16: continue 
@@ -53,4 +54,5 @@ with open(variants) as f:
                 region = str(pairs[0][1] + 1)
                 ref_nucleotide = ref_seq.query(int(region),int(region))
                 print('\t'.join([contig, region, region,
-                                 variant_id, ref_nucleotide, variant]))
+                                 variant_id, ref_nucleotide, variant,
+                                 count]))

@@ -4,13 +4,16 @@ import sys
 reference = 'NC_045512.2.fasta'
 variants = 'variants7M_3500Mline_7.64Mgenomes_min100.tsv'
 annotations = 'GCF_009858895.2_ASM985889v3_genomic.gff.gz'
-outdir = '/home/murad/Repositories/AnVir/output'
+# outdir = '/home/murad/Repositories/AnVir/output' # linux
+outdir = '/Users/murad/Repositories/AnVir/output' # my mac
 
 rule All:
     input:
-        f'{outdir}/snvs.bed',
-        f'{outdir}/proteins.bed',
-        f'{outdir}/amino_acid_changes.bed'
+        f'{outdir}/snvs_raw.bed',
+        f'{outdir}/snvs_filtered.bed',
+        f'{outdir}/annotated_snvs.bed',
+        # f'{outdir}/proteins.bed',
+        # f'{outdir}/amino_acid_changes.bed'
         
 rule GetSNVRegions:
     """
@@ -21,11 +24,26 @@ rule GetSNVRegions:
     input:
         variants, reference
     output:
-        f'{outdir}/snvs.bed'
+        f'{outdir}/snvs_raw.bed'
     shell:
         """
         python scripts/get_snvs.py {input} | bedtools sort > {output}
         """
+
+rule DisambiguateVariants:
+    """
+    * for duplicate variants, keep the variant with the maximum number of occurrences.
+    * the count will be in the 7th column
+    """
+    input:
+        snvs = rules.GetSNVRegions.output
+    output:
+        snvs = f'{outdir}/snvs_filtered.bed'
+    shell:
+        """
+        python scripts/filter_by_count.py {input.snvs} > {output}
+        """
+        
 
 rule GetProteinRegions:
     """
@@ -41,17 +59,29 @@ rule GetProteinRegions:
         f'{outdir}/proteins.bed'
     shell:
         'python scripts/get_protein_regions.py {input} {output}'
+
+rule AnnotateSNVs:
+    """
+    * intersect variants with proteins
+    * apply variant changes to the reference
+    * get ref/changed amino acid sequences for each prot
+    * find variants' amino acid pos
+    * relative snv index = (absolute pos) - (prot start)
+    * aa index = (rel pos) // 3
+    * annotate the snp with the gene name and the {pos}{ref}>{changed}
+    """
+    input:
+        snvs = rules.DisambiguateVariants.output.snvs,
+        proteins = rules.GetProteinRegions.output,
+        ref = reference
+    output:
+        snvs = f'{outdir}/annotated_snvs.bed'
+    shell:
+        """
+        bedtools intersect -wa -wb -a {input.snvs} -b {input.proteins} |
+        uniq | python scripts/annotate_snvs.py {input.ref} > {output.snvs}
+        """
         
-
-# get snps
-# get relevant annotation bed regions
-
-# rewrite the codons? ... nah
-# intersect snps with annotation? maybe not
-# XX apply snps to ref
-# compare gene amino acid seq with changed seq
-# note position of change (in terms of amino acid) and
-# orig -> changed element
 
 rule GetAminoAcidChanges:
     """
@@ -62,13 +92,15 @@ rule GetAminoAcidChanges:
     """
     input:
         proteins = rules.GetProteinRegions.output,
-        snps = rules.GetSNVRegions.output,
+        snvs = rules.DisambiguateVariants.output.snvs,
         ref = reference
     output:
-        f'{outdir}/amino_acid_changes.bed'
+        aa_changes = f'{outdir}/amino_acid_changes.bed',
+        annontated_variants = f'{outdir}/annotated_variants.bed'
     shell:
         """
         python scripts/get_amino_acid_changes.py \\
-            {input.proteins} {input.snps} {input.ref} > {output}
+            {input.proteins} {input.snvs} {input.ref} \\
+            {output.aa_changes} {output.annotated_variants}
         """
         
