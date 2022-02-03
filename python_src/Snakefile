@@ -2,13 +2,18 @@ import sys
 
 ### TODO use config
 reference = 'NC_045512.2.fasta'
-variants = 'variants7M_3500Mline_7.64Mgenomes_min100.tsv'
-annotations = 'GCF_009858895.2_ASM985889v3_genomic.gff.gz'
+# variants = 'variants7M_3500Mline_7.64Mgenomes_min100.tsv'
+variants = './variants_4_5M_GT10K.tsv'
+annotations = 'proteins.bed'
+clades = 'clades.tsv'
 # outdir = '/home/murad/Repositories/AnVir/output' # linux
 outdir = '/Users/murad/Repositories/AnVir/output' # my mac
 
 rule All:
     input:
+        f'{outdir}/annotated_snv_with_clades.bed',
+        f'{outdir}/annotated_dels.bed',
+        f'{outdir}/dels_raw.bed',
         f'{outdir}/snvs_raw.bed',
         f'{outdir}/snvs_filtered.bed',
         f'{outdir}/annotated_snvs.bed',
@@ -30,6 +35,16 @@ rule GetSNVRegions:
         python scripts/get_snvs.py {input} | bedtools sort > {output}
         """
 
+rule GetDelRegions:
+    input:
+        variants, reference
+    output:
+        f'{outdir}/dels_raw.bed'
+    shell:
+        """
+        python scripts/get_dels.py {input} | bedtools sort > {output}
+        """
+
 rule DisambiguateVariants:
     """
     * for duplicate variants, keep the variant with the maximum number of occurrences.
@@ -45,21 +60,6 @@ rule DisambiguateVariants:
         """
         
 
-rule GetProteinRegions:
-    """
-    * convert relevant annotations to bed file.
-    * Ignoring ORF1ab gene(s).  Instead just keep the sub proteins
-      that come from the large polyprotein
-        - for those proteins, I will list the gene as ORF1ab
-    * other genes are fine to include
-    """
-    input:
-        annotations
-    output:
-        f'{outdir}/proteins.bed'
-    shell:
-        'python scripts/get_protein_regions.py {input} {output}'
-
 rule AnnotateSNVs:
     """
     * intersect variants with proteins
@@ -71,17 +71,55 @@ rule AnnotateSNVs:
     * annotate the snp with the gene name and the {pos}{ref}>{changed}
     """
     input:
+        annot = annotations,
         snvs = rules.DisambiguateVariants.output.snvs,
-        proteins = rules.GetProteinRegions.output,
         ref = reference
     output:
         snvs = f'{outdir}/annotated_snvs.bed'
     shell:
         """
-        bedtools intersect -wa -wb -a {input.snvs} -b {input.proteins} |
+        bedtools intersect -wa -wb -a {input.snvs} -b {input.annot} |
         uniq | python scripts/annotate_snvs.py {input.ref} > {output.snvs}
         """
         
+rule AnnotateDELs:
+    """
+    intersect variants with annotations
+    for each annotation:
+        for each variant:
+            apply variant (isolated) to the annotation ref region
+            translate the ref region and the variant modified version
+            for each amino acid
+               compare
+               if they differ then annotate it onto the variant region
+    """
+    input:
+        annot = annotations,
+        ref = reference,
+        dels = rules.GetDelRegions.output
+    output:
+        dels = f'{outdir}/annotated_dels.bed'
+    shell:
+        """
+        bedtools intersect -wa -wb -a {input.dels} -b {input.annot} |
+        uniq | python scripts/annotate_dels.py {input.ref} > {output.dels}|uniq
+        """
+
+rule AnnotateCladeSNV:
+    """
+    Given a table of clade variant sets, annotate SNVS by clade 'membership'
+    """
+    input:
+        annot_snvs = rules.AnnotateSNVs.output.snvs,
+        clades = clades
+    output:
+        f'{outdir}/annotated_snv_with_clades.bed'
+    shell:
+        """
+        python scripts/annotate_snvs_clade.py {input.annot_snvs} {input.clades} > {output}
+        """
+        
+    
 
 rule GetAminoAcidChanges:
     """
@@ -91,7 +129,8 @@ rule GetAminoAcidChanges:
       and changed amino acid (eg 1C>Q, 25N>B, ...)
     """
     input:
-        proteins = rules.GetProteinRegions.output,
+        # proteins = rules.GetProteinRegions.output,
+        annotations,
         snvs = rules.DisambiguateVariants.output.snvs,
         ref = reference
     output:

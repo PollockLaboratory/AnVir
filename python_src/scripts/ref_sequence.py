@@ -81,11 +81,16 @@ class RefSeq:
 
         if change:
             f = list(self.fasta[start-1:end])
-            cs = change[0][0] - start
-            ce = change[0][1] - start
-            if len(change[1]) != (ce - cs + 1):
-                raise ValueError("change interval != change string")
-            f[cs:ce+1] = change[1]
+            cs = max(change[0][0] - start, 0)
+            ce = min(change[0][1] - start, end - start)
+
+            if change[1] == 'del':
+                f[cs:ce+1] = ''
+            elif len(change[1]) != (ce - cs + 1):
+                raise ValueError("change interval != change string for non-del")
+            else:
+                f[cs:ce+1] = change[1]
+
             return ''.join(f)
         return self.fasta[start-1:end]
             
