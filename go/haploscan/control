@@ -1,0 +1,21 @@
+#input files and parameters
+seqfile = sequences.fasta 			# query sequence file
+filetype = fasta				# fasta sequence file; also accepts fastq
+kinfile = kcounts14_WuhanHu1_14Oct2020.xls 	# wuhan kcounts; reference file created 14 October 2020
+varinfile = variants_4_5M_GT10K.xls		# variant input file, headers on second line
+
+klen = 14					# kmer length
+# not doing filter in tagvars
+dofilter = F					# utilize seqnamefilter; t, T, true, True, TRUE accepted
+dorevcomp = F					# do all sums and comparisons including reverse compliments of kmers; needed to use QueryNotRef()
+linelimit = 50000000				# line limit, about 300 per cov seq
+
+# output files and parameters
+varfile = variant.xls				# variant output file, headers on second line
+hapfile = haplotypes.xls			# output of haplotype counts
+hapcodefile = hapcodedseqs.txt			# output of psuedo fasta file, with name of sequence, just listing haplotype codes
+
+printNs = false					# print Ns in sequences? We normally don't want to
+kminprint = 10					# don’t print kmers less than this to kcount file
+hapminprint = 100000				# don’t print haplotypes with variants less than this to haplotype file
+

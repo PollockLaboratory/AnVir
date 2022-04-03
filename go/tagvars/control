@@ -1,0 +1,21 @@
+#input files and parameters
+#seqfile = sequences.fasta 			# query sequence file
+seqfile = sequences30Jan2022.fasta 			# query sequence file
+filetype = fasta				# fasta sequence file; also accepts fastq
+kinfile = kcounts14_WuhanHu1_14Oct2020.xls 	# wuhan kcounts; reference file created 14 October 2020
+
+klen = 14					# kmer length
+# not doing filter in tagvars
+dofilter = F					# utilize seqnamefilter; t, T, true, True, TRUE accepted
+dorevcomp = F					# do all sums and comparisons including reverse compliments of kmers; needed to use QueryNotRef()
+linelimit = 7000000000				# line limit, about 300 per cov seq
+linelimit = 3500000				# line limit, about 300 per cov seq
+
+# output files and parameters
+kcountfile = allcounts				# simple kmer counts prefix; format for eg k=14 is allcounts14_seqfile.xls
+qnotk = qnotk					# tag for qnotk output (in the seqfile but not in the reference file)
+varfile = variants.xls				# output of qnotk consecutive variants
+
+printNs = false					# print Ns in sequences? We normally don't want to
+kminprint = 100					# don’t print kmers less than this to kcount file
+

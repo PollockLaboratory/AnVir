@@ -1,0 +1,29 @@
+loudness = 2				# control detail of program output, default is murmur (2)
+record_loudness = 4			# loudness for record file, default is talk (2)
+runmode = 1				# runmode of program 1 = basic, 2 = 
+printmode = 1				# to print or not to print, that is the question
+
+seqfile = sequences.fasta 		# query sequence file
+
+filetype = fasta 			# fasta sequence file
+seqnamefilter =  empty			# not using this in tagvars
+kinfile = kcounts14_WuhanHu1_14Oct2020.xls 	# wuhan kcounts; reference file
+kcountfile = kcounts			# simple kmer counts
+qnotk = qnotk				# tag for qnotk output (in the seqfile but not in the reference file)
+qandk = qandk				# tag for qandk output (in both the seqfile and the reference file)
+
+dofilter = false			# utilize seqnamefilter; t, T, true, True, TRUE accepted
+minseqlen = 0				# sequences must be greater than minseqlen
+recordseq = 0				# will memorize the input sequence (set 0 for big genomes)
+minline = 0				# line minimum
+linelimit = 5000000000			# line limit
+klen = 14				# kmer length
+kmaxoligo = 8				# split kmers into sets if over this
+kminprint = 1				# don’t print kmers less than this to kcount file
+printNs = false				# print Ns in sequences?
+dorevcomp = true			# do all sums and comparisons including reverse compliments of kmers; needed to use QueryNotRef()
+kmaxprint = 100000			# don’t print kmers with counts more than this
+
+breakearly = 1				# flag to break off for quick reading first lines
+maxlines = 8000000			# just so we don’t get carried away without meaning to
+seed = 248597				# seed for random number generator, if needed
