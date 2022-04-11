@@ -1,0 +1,145 @@
+import sys
+
+### TODO use config
+reference = 'NC_045512.2.fasta'
+# variants = 'variants7M_3500Mline_7.64Mgenomes_min100.tsv'
+variants = './variants_4_5M_GT10K.tsv'
+annotations = 'proteins.bed'
+clades = 'clades.tsv'
+# outdir = '/home/murad/Repositories/AnVir/output' # linux
+outdir = '/Users/murad/Repositories/AnVir/output' # my mac
+
+rule All:
+    input:
+        f'{outdir}/annotated_snv_with_clades.bed',
+        f'{outdir}/annotated_dels.bed',
+        f'{outdir}/dels_raw.bed',
+        f'{outdir}/snvs_raw.bed',
+        f'{outdir}/snvs_filtered.bed',
+        f'{outdir}/annotated_snvs.bed',
+        # f'{outdir}/proteins.bed',
+        # f'{outdir}/amino_acid_changes.bed'
+        
+rule GetSNVRegions:
+    """
+    * load the variants sequences from tsv
+    * keep only variants that are snvs (ie 14 sequences in sliding window)
+    * output to bed format with variant nucleotide in final column
+    """
+    input:
+        variants, reference
+    output:
+        f'{outdir}/snvs_raw.bed'
+    shell:
+        """
+        python scripts/get_snvs.py {input} | bedtools sort > {output}
+        """
+
+rule GetDelRegions:
+    input:
+        variants, reference
+    output:
+        f'{outdir}/dels_raw.bed'
+    shell:
+        """
+        python scripts/get_dels.py {input} | bedtools sort > {output}
+        """
+
+rule DisambiguateVariants:
+    """
+    * for duplicate variants, keep the variant with the maximum number of occurrences.
+    * the count will be in the 7th column
+    """
+    input:
+        snvs = rules.GetSNVRegions.output
+    output:
+        snvs = f'{outdir}/snvs_filtered.bed'
+    shell:
+        """
+        python scripts/filter_by_count.py {input.snvs} > {output}
+        """
+        
+
+rule AnnotateSNVs:
+    """
+    * intersect variants with proteins
+    * apply variant changes to the reference
+    * get ref/changed amino acid sequences for each prot
+    * find variants' amino acid pos
+    * relative snv index = (absolute pos) - (prot start)
+    * aa index = (rel pos) // 3
+    * annotate the snp with the gene name and the {pos}{ref}>{changed}
+    """
+    input:
+        annot = annotations,
+        snvs = rules.DisambiguateVariants.output.snvs,
+        ref = reference
+    output:
+        snvs = f'{outdir}/annotated_snvs.bed'
+    shell:
+        """
+        bedtools intersect -wa -wb -a {input.snvs} -b {input.annot} |
+        uniq | python scripts/annotate_snvs.py {input.ref} > {output.snvs}
+        """
+        
+rule AnnotateDELs:
+    """
+    intersect variants with annotations
+    for each annotation:
+        for each variant:
+            apply variant (isolated) to the annotation ref region
+            translate the ref region and the variant modified version
+            for each amino acid
+               compare
+               if they differ then annotate it onto the variant region
+    """
+    input:
+        annot = annotations,
+        ref = reference,
+        dels = rules.GetDelRegions.output
+    output:
+        dels = f'{outdir}/annotated_dels.bed'
+    shell:
+        """
+        bedtools intersect -wa -wb -a {input.dels} -b {input.annot} |
+        uniq | python scripts/annotate_dels.py {input.ref} > {output.dels}|uniq
+        """
+
+rule AnnotateCladeSNV:
+    """
+    Given a table of clade variant sets, annotate SNVS by clade 'membership'
+    """
+    input:
+        annot_snvs = rules.AnnotateSNVs.output.snvs,
+        clades = clades
+    output:
+        f'{outdir}/annotated_snv_with_clades.bed'
+    shell:
+        """
+        python scripts/annotate_snvs_clade.py {input.annot_snvs} {input.clades} > {output}
+        """
+        
+    
+
+rule GetAminoAcidChanges:
+    """
+    * applies snps to reference sequence
+    * gets amino acid sequence of ref/snp'd protiens
+    * get for each protien, note position (1-based), orig amino acid,
+      and changed amino acid (eg 1C>Q, 25N>B, ...)
+    """
+    input:
+        # proteins = rules.GetProteinRegions.output,
+        annotations,
+        snvs = rules.DisambiguateVariants.output.snvs,
+        ref = reference
+    output:
+        aa_changes = f'{outdir}/amino_acid_changes.bed',
+        annontated_variants = f'{outdir}/annotated_variants.bed'
+    shell:
+        """
+        python scripts/get_amino_acid_changes.py \\
+            {input.proteins} {input.snvs} {input.ref} \\
+            {output.aa_changes} {output.annotated_variants}
+        """
+        
