@@ -66,7 +66,8 @@ func LoadWindowedReference(fasta_path string, k int) *WindowedReference {
 	var sb strings.Builder
 
 	scanner.Scan()
-	Ref.Contig = scanner.Text()[1:] // discard the '>'
+	// discard the '>' and description
+	Ref.Contig = strings.Fields(scanner.Text()[1:])[0]
 	Ref.K = k
 
 	for scanner.Scan() {
@@ -81,4 +82,37 @@ func LoadWindowedReference(fasta_path string, k int) *WindowedReference {
 		Ref.addseq(seq[i:i+k], Interval{i+1, i+k})
 	}
 	return Ref
+}
+
+// ============================================================================
+/// Contiguous Reference
+// ============================================================================
+
+// Reference genome (single fasta record) for continous
+// interval (1-based closed) queries
+type ContiguousReference struct {
+	Contig string
+	Seq    string   
+}
+func LoadContiguousReference(fasta_path string) *ContiguousReference {
+	f, err := os.Open(fasta_path)
+	utils.Check(err)
+	defer f.Close()
+
+	Ref := new(ContiguousReference)
+	scanner := bufio.NewScanner(f)
+	var sb strings.Builder
+
+	scanner.Scan()
+	Ref.Contig = strings.Fields(scanner.Text()[1:])[0]
+
+	for scanner.Scan() {
+		sb.WriteString(scanner.Text())
+	}
+	Ref.Seq = sb.String()
+	return Ref
+}
+// 1-based closed interval query of the reference.
+func (cr *ContiguousReference)Query(start int, end int) string {
+	return cr.Seq[start-1:end]
 }

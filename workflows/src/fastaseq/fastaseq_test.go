@@ -1,9 +1,15 @@
 package fastaseq_test
 import (
+	"path/filepath"
 	"reflect"
 	"testing"
 	"annotation/fastaseq"
+	"annotation/utils"
 )
+
+// ============================================================================
+/// Windowed Ref
+// ============================================================================
 
 // Test the WindowedReference struct/methods with the following fasta:
 // test_ref_windows.fa (in same working directory)
@@ -11,10 +17,10 @@ func TestWindowedReference(t *testing.T)() {
 	Ref := fastaseq.LoadWindowedReference("test_ref_windows.fa", 3)
 
 	t.Run("Contig Parsed", func(t *testing.T)() {
-		a := "CONTIG_NAME"
-		b := Ref.Contig
-		if a != b {
-			t.Errorf("contig check: exptected %s but got %s", a, b)
+		correct := "CONTIG_NAME"
+		result := Ref.Contig
+		if correct != result {
+			t.Errorf("contig check: exptected %s but got %s", correct, result)
 		}
 	})
 	t.Run("Unique Kmer", func(t *testing.T)() {
@@ -37,5 +43,43 @@ func TestWindowedReference(t *testing.T)() {
 		}
 		result = Ref.Query("AAT")
 		correct = []fastaseq.Interval{{5, 7}, {11, 13}}
+	})
+}
+
+func BenchmarkWindowedReference(b *testing.B) {
+	path, err := filepath.Abs("../../NC_045512.2.fasta")
+	utils.Check(err)
+	// for i := 0; i < 100; i++ { // give me challenge
+		fastaseq.LoadWindowedReference(path, 14)
+	// }
+}
+
+// ============================================================================
+/// Contiguous Ref
+// ============================================================================
+func TestContinuousReference(t *testing.T)() {
+	Ref := fastaseq.LoadContiguousReference("test_ref_windows.fa")
+
+	t.Run("Contig Parsed", func(t *testing.T)() {
+		correct := "CONTIG_NAME"
+		result := Ref.Contig
+		if correct != result {
+			t.Errorf("\ncontig check: exptected %s but got %s", correct, result)
+		}
+	})
+	t.Run("Correct sequence", func(t *testing.T)() {
+		correct := "ATCGAATTTGAATGTA"
+		result := Ref.Seq
+		if correct != result {
+			t.Errorf("\ncorrect = %s\nresult = %s\n", correct, result)
+		}
+	})
+	t.Run("Interval query", func(t *testing.T)() {
+		//7,16
+		correct := "TTTGAATGTA"
+		result := Ref.Query(7, 16)
+		if correct != result {
+			t.Errorf("\ncorrect = %s\nresult = %s\n", correct, result)
+		}
 	})
 }
