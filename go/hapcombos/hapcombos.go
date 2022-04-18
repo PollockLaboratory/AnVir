@@ -64,7 +64,7 @@ func main() {
 	haps.Init(globs.Geti("klen"), globs.Getf("hapfile"), globs.Geti("kminprint"))
 	haps.Read(globs.Getf("hapinfile")) // read in from standard file
 	//haps.Print(1)                      // print out to check mode 1 is simple mode
-	haps.Combos()
+	haps.Combos(globs.Geti("hapmincombo"))
 	haps.Print(2) // print out to check mode 1 is simple mode
 	// end main code
 
