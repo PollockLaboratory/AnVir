@@ -1,0 +1,7 @@
+##fileformat=VCFv4.3
+##reference=blah
+##INFO=<ID=TEST1,Number=.,Type=String,Description="test1 field">
+##INFO=<ID=TEST2,Number=1,Type=Integer,Description="test2 field">
+##contig=<ID=testchr,length=10>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+testchr	1	1	A	T	.	.	TEST1=hello,world;TEST2=2
