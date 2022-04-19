@@ -6,12 +6,15 @@ import (
 	"io"
 	"os"
 	"time"
+
 	//"strings"
 	//"strconv"
 
 	globals "AnVir/globals"
 	seqmer "AnVir/seqmer"
 )
+
+// delete this comment
 
 // program holds information about this program
 type program struct {
