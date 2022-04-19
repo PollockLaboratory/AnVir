@@ -5,7 +5,7 @@ import (
 	"bufio"
 	"os"
 	"strings"
-	"annotation/utils"
+	. "annotation/utils" // is this bad?
 )
 // =============================================================================
 // This package provides a datastructure for querying the viral
@@ -14,14 +14,6 @@ import (
 // =============================================================================
 
 
-// ============================================================================
-/// Helper structs
-// ============================================================================
-
-type Interval struct {
-	Start int
-	End   int
-}
 
 // ============================================================================
 /// Windowed Reference
@@ -57,7 +49,7 @@ func (fs *WindowedReference)Query(seq string) []Interval {
 // Serves as the constructor for WindowedReference objects.
 func LoadWindowedReference(fasta_path string, k int) *WindowedReference {
 	f, err := os.Open(fasta_path)
-	utils.Check(err)
+	Check(err)
 	defer f.Close()
 
 	Ref := new(WindowedReference)
@@ -79,7 +71,7 @@ func LoadWindowedReference(fasta_path string, k int) *WindowedReference {
 		// remember: sliced sequence is 0-based, half-open
 		// genomic interval is 1-based, closed
 		// Ref.Kmer2coords[seq[i:i+k]] = Interval{i+1, i+k}
-		Ref.addseq(seq[i:i+k], Interval{i+1, i+k})
+		Ref.addseq(seq[i:i+k], Interval{Start: i+1, End: i+k})
 	}
 	return Ref
 }
@@ -96,7 +88,7 @@ type ContiguousReference struct {
 }
 func LoadContiguousReference(fasta_path string) *ContiguousReference {
 	f, err := os.Open(fasta_path)
-	utils.Check(err)
+	Check(err)
 	defer f.Close()
 
 	Ref := new(ContiguousReference)
@@ -115,4 +107,7 @@ func LoadContiguousReference(fasta_path string) *ContiguousReference {
 // 1-based closed interval query of the reference.
 func (cr *ContiguousReference)Query(start int, end int) string {
 	return cr.Seq[start-1:end]
+}
+func (cr *ContiguousReference)Length() int {
+	return len(cr.Seq)
 }

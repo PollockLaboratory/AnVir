@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 	"annotation/fastaseq"
-	"annotation/utils"
+	. "annotation/utils"
 )
 
 // ============================================================================
@@ -25,7 +25,7 @@ func TestWindowedReference(t *testing.T)() {
 	})
 	t.Run("Unique Kmer", func(t *testing.T)() {
 		result := Ref.Query("ATC")
-		correct := fastaseq.Interval{1, 3}
+		correct := Interval{1, 3}
 		if len(result) != 1 {
 			t.Errorf(
 				"Query must have only contain 1 interval.  %d found",
@@ -37,18 +37,18 @@ func TestWindowedReference(t *testing.T)() {
 	})
 	t.Run("Non-Unique Kmer", func(t *testing.T)() {
 		result := Ref.Query("GAA")
-		correct := []fastaseq.Interval{{4, 6}, {10, 12}}
+		correct := []Interval{{4, 6}, {10, 12}}
 		if !reflect.DeepEqual(result, correct) {
 			t.Errorf("\nQuery: 'GAA'\nresult=%v\ncorrect=%v,", result, correct)
 		}
 		result = Ref.Query("AAT")
-		correct = []fastaseq.Interval{{5, 7}, {11, 13}}
+		correct = []Interval{{5, 7}, {11, 13}}
 	})
 }
 
 func BenchmarkWindowedReference(b *testing.B) {
 	path, err := filepath.Abs("../../NC_045512.2.fasta")
-	utils.Check(err)
+	Check(err)
 	// for i := 0; i < 100; i++ { // give me challenge
 		fastaseq.LoadWindowedReference(path, 14)
 	// }
@@ -75,9 +75,22 @@ func TestContinuousReference(t *testing.T)() {
 		}
 	})
 	t.Run("Interval query", func(t *testing.T)() {
-		//7,16
 		correct := "TTTGAATGTA"
 		result := Ref.Query(7, 16)
+		if correct != result {
+			t.Errorf("\ncorrect = %s\nresult = %s\n", correct, result)
+		}
+	})
+	t.Run("Single nucleotide query", func(t *testing.T)() {
+		correct := "G"
+		result := Ref.Query(10, 10)
+		if correct != result {
+			t.Errorf("\ncorrect = %s\nresult = %s\n", correct, result)
+		}
+	})
+	t.Run("Single nucleotide query at end of ref", func(t *testing.T)() {
+		correct := "A"
+		result := Ref.Query(16, 16)
 		if correct != result {
 			t.Errorf("\ncorrect = %s\nresult = %s\n", correct, result)
 		}
