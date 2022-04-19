@@ -13,7 +13,6 @@ import (
 	seqmer "AnVir/seqmer"
 )
 
-// EDIT added a comment
 type program struct {
 	id       int
 	name     string
@@ -44,11 +43,9 @@ func (p *program) Set(writer io.Writer) {
 	fmt.Fprintln(writer, "\tAuthors:", p.authors, "Last Modified:", p.modified, "\n")
 }
 
-// Another comment
-
 func main() {
 	fmt.Println("Setting Append File")
-	fappend, _ := os.OpenFile("access.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	fappend, _ := os.OpenFile("outputs/access.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	defer fappend.Close()
 	writer := bufio.NewWriter(fappend)
 	defer writer.Flush() // need this to get output

@@ -878,13 +878,13 @@ type QSeqMatches struct {
 func (kmers *Oligos) Getoutfile(infile string) {
 	base := strings.SplitN(infile, ".", 2)
 	strlen := strconv.Itoa(kmers.klen)
-	kmers.Outfile = kmers.Outfile + strlen + "_" + base[0] + ".xls"
+	kmers.Outfile = kmers.Outfile + strlen + "_" + base[0] + ".kcounts"
 }
 
 // GetoutfileMulti outputs kmer counts and positions
 func (kmers *Oligos) GetoutfileMulti(kcountpre string, basename string, directory string) {
 	strlen := strconv.Itoa(kmers.klen)
-	kmers.Outfile = directory + kcountpre + strlen + "_" + basename + ".xls"
+	kmers.Outfile = directory + kcountpre + strlen + "_" + basename + ".kcounts"
 }
 
 // Kprint outputs kmer counts
