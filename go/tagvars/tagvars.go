@@ -13,7 +13,7 @@ import (
 	seqmer "AnVir/seqmer"
 )
 
-// program holds information about this program
+// EDIT added a comment
 type program struct {
 	id       int
 	name     string
@@ -43,6 +43,8 @@ func (p *program) Set(writer io.Writer) {
 	p.modified = "March 21, 2022"
 	fmt.Fprintln(writer, "\tAuthors:", p.authors, "Last Modified:", p.modified, "\n")
 }
+
+// Another comment
 
 func main() {
 	fmt.Println("Setting Append File")
