@@ -74,15 +74,15 @@ func main() {
 
 	vars := new(seqmer.Variants) // create global
 	vars.Init(globs.Geti("klen"), globs.Getf("varfile"), globs.Geti("kminprint"))
-	vars.Read(globs.Getf("varinfile"), globs.Geti("varreadmin"))
+	vars.Read(globs.Getf("varinfile"))
 	vars.Print()
 	vars.MatchPrint()
 
 	haps := new(seqmer.Haplotypes) // create global
 	haps.Init(globs.Geti("klen"), globs.Getf("hapfile"), globs.Geti("kminprint"))
-	vars.Addhaps(haps)                      // add haplotype link to vars
-	seqs.HapBuilder(qnkmers, refmers, vars) // yet another version
-	haps.Print(1)                           // 1 is the basic print mode; we use 2 in hapcombos
+	vars.Addhaps(haps)                        // add haplotype link to vars
+	seqs.Tardigrading(qnkmers, refmers, vars) // yet another version
+	haps.Print()
 
 	// end main code
 
