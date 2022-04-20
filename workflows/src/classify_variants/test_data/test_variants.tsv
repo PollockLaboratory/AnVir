@@ -1,0 +1,11 @@
+header 1
+header 2
+VariantID	ID2	count	name	ID	devnum	prev	deviants	next																											
+1	blah_ID2	1	blah_name	blah_devnum	ATCGA	TCGAt	CGAtA	GAtAT	AtATG	tATGG	ATGGC
+2	blah_ID2	33	blah_name	blah_devnum	CGCAT	GCATT	CATTA	ATTAG	TTAGA	TAGAT
+3	blah_ID2	42	blah_name	blah_devnum	TTTAG	TTAGT	TAGTC	AGTCG	GTCGG	TCGGG
+4	blah_ID2	11	blah_name	blah_devnum	TGGCG	GGCGa	GCGaC	CGaCG	GaCGC	aCGCA	CGCAT
+5	blah_ID2	13	blah_name	blah_devnum	CGCAT	GCATa	CATab	ATabc	TabcT	abcTT	bcTTA	cTTAG	TTAGA
+6	blah_ID2	55	blah_name	blah_devnum	CGATA	GATAt	ATAtg	TAtgG	AtgGC	tgGCG	gGCGC	GCGCG
+7	blah_ID2	100	blah_name	blah_devnum	CGATA	GATAt	ATAtG	TAtGC	AtGCG	tGCGC	GCGCG
+8	blah_ID2	1001	blah_name	blah_devnum	CGATA	GATAt	ATAtg	TAtgG	AtgGG	tgGGC	gGGCG	GGCGC

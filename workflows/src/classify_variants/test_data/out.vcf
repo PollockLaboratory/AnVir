@@ -1,0 +1,16 @@
+##fileformat=VCFv4.3
+##reference=/home/murad/Repositories/AnVir/workflows/src/classify_variants/test_data/test_ref.fa
+##INFO=<ID=TYPE,Number=1,Type=String,Description="Variant type.">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position (closed interval)">
+##INFO=<ID=COUNT,Number=1,Type=Integer,Description="Number of occurrences.">
+##INFO=<ID=KMERS,Number=.,Type=String,Description="List of deviant kmer sequences bookended by the prev/next anchor sequences">
+##contig=<ID=contig,length=34>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+contig	6	1	T	t	.	.	TYPE=SNP;END=6;COUNT=1;KMERS=ATCGA,TCGAt,CGAtA,GAtAT,AtATG,tATGG,ATGGC
+contig	18	2	T	DEL	.	.	TYPE=DEL;END=18;COUNT=33;KMERS=CGCAT,GCATT,CATTA,ATTAG,TTAGA,TAGAT
+contig	22	3	ATTCGA	DEL	.	.	TYPE=DEL;END=27;COUNT=42;KMERS=TTTAG,TTAGT,TAGTC,AGTCG,GTCGG,TCGGG
+contig	12	4	INS	a	.	.	TYPE=INS;END=13;COUNT=11;KMERS=TGGCG,GGCGa,GCGaC,CGaCG,GaCGC,aCGCA,CGCAT
+contig	17	5	INS	abc	.	.	TYPE=INS;END=18;COUNT=13;KMERS=CGCAT,GCATa,CATab,ATabc,TabcT,abcTT,bcTTA,cTTAG,TTAGA
+contig	7	6	TG	tg	.	.	TYPE=COMPOUND;END=10;COUNT=55;KMERS=CGATA,GATAt,ATAtg,TAtgG,AtgGC,tgGCG,gGCGC,GCGCG
+contig	7	7	TG	t-	.	.	TYPE=COMPOUND;END=10;COUNT=100;KMERS=CGATA,GATAt,ATAtG,TAtGC,AtGCG,tGCGC,GCGCG
+contig	7	8	T-	tg	.	.	TYPE=COMPOUND;END=9;COUNT=1001;KMERS=CGATA,GATAt,ATAtg,TAtgG,AtgGG,tgGGC,gGGCG,GGCGC

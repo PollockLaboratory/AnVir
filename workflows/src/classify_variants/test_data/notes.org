@@ -1,0 +1,280 @@
+#+TITLE: Variant classification test notes
+- let k = 5
+* Original fasta
+>contig blah blah
+ATCGAAATGGCGCGCAT
+TTAGATTCGATCGGGCA
+
+
+
+* Test single snp
+** Test Case
+          6
+          v
+*ref:* ATCGATATGGCGCGCAT
+     .....*...........
+*alt:* ATCGAtATGGCGCGCAT
+     
+ref: TTAGATTCGATCGGGCA
+     .................
+alt: TTAGATTCGATCGGGCA
+
+** Variant sequence
+ATCGA prev anchor
+ TCGAt
+  CGAtA
+   GAtAT
+    AtATG
+     tATGG
+      ATGGC next anchor
+
+** Correct vcf line
+CHROM = contig
+POS = 6
+ID = 1
+REF = T
+Alt = t
+INFO/TYPE = SNP
+INFO/END = 6
+COUNT = 1 (just random number in the test_variants.tsv)
+KMERS = ATCGA,TCGAt,CGAtA,GAtAT,AtATG,tATGG,ATGGC
+
+
+* Test single del length 1
+** Test case
+*ref:* ATCGATATGGCGCGCAT
+     .................
+*alt:* ATCGATATGGCGCGCAT
+
+    18
+     v
+*ref:* TTAGATTCGATCGGGCA
+     D................
+*alt:* -TAGATTCGATCGGGCA
+
+** Variant sequence
+CGCAT prev anchor
+ GCAT-T
+  CAT-TA
+   AT-TAG
+    T-TAGA
+      TAGAT next anchor
+
+** Correct vcf line
+CHROM = contig
+POS = 18
+ID = 2
+REF = T
+ALT = DEL
+INFO/TYPE = DEL
+INFO/END = 18
+INFO/COUNT = 33 
+INFO/KMERS = CGCAT,GCATT,CATTA,ATTAG,TTAGA,TAGAT
+
+
+* Test single del length 6
+*ref:* ATCGATATGGCGCGCAT
+     .................
+*alt:* ATCGATATGGCGCGCAT
+
+        22    27
+         v    v
+*ref:* TTAGATTCGATCGGGCA
+     ....DDDDDD.......
+*alt:* TTAG------TCGGGCA
+
+** Variant sequence
+TTTAG prev anchor
+ TTAG-T
+  TAG-TC
+   AG-TCG
+    G-TCGG
+      TCGGG next anchor
+
+** Correct vcf line
+CHROM = contig
+POS = 22
+ID = 3
+REF = ATTCGA
+ALT = DEL
+INFO/TYPE = DEL
+INFO/END = 27
+INFO/COUNT = 42
+INFO/KMERS = TTTAG,TTAGT,TAGTC,AGTCG,GTCGG,TCGGG
+
+* Test single ins length 1
+** Test Case
+               12 13
+                v v
+*ref:* ATCGATATGGCG-CGCAT
+     ............I....
+*alt:* ATCGATATGGCGaCGCAT
+
+*ref:* TTAGATTCGATCGGGCA
+     .................
+*alt:* TTAGATTCGATCGGGCA
+
+** Variant Sequence
+TGGCG prev anchor
+ GGCGa
+  GCGaC
+   CGaCG
+    GaCGC
+     aCGCA
+      CGCAT next anchor
+
+** Correct vcf line
+CHROM = contig
+POS = 12
+ID = 4
+REF = INS
+ALT = a
+INFO/TYPE = INS
+INFO/END = 13
+INFO/COUNT = 11
+INFO/KMERS = TGGCG,GGCGa,GCGaC,CGaCG,GaCGC,aCGCA,CGCAT
+
+* Test single ins length 4
+** Test Case
+                    17
+                     v
+*ref:* ATCGATATGGCGCGCAT---
+     .................III
+*alt:* ATCGATATGGCGCGCATabc
+
+    18
+     v
+*ref:* TTAGATTCGATCGGGCA
+     .................
+*alt:* TTAGATTCGATCGGGCA
+
+** Variant Sequence
+CGCAT prev anchor
+ GCATa
+  CATab
+   ATabc
+    TabcT
+     abcTT
+      bcTTA
+       cTTAG
+        TTAGA next anchor
+
+** Correct vcf line
+CHROM = contig
+POS = 17
+ID = 5
+REF = INS
+ALT = abc
+INFO/TYPE = INS
+INFO/END = 18
+INFO/COUNT = 13
+INFO/KMERS = CGCAT,GCATa,CATab,ATabc,TabcT,abcTT,bcTTA,cTTAG,TTAGA
+
+* Notes on Compound variants
+Technically for a really complex variant (may never occur),
+there could be multiple ways to align. I'm just testing the
+basic functionality of this component, but it'll give the
+right alignment most of the time in regions that aren't too complex.
+
+Since a compound variant could include insertions, I've decided to
+represent the start/end interval as
+start = the last base that aligns to the ref before the variant
+end = the first base that aligns to the ref after the variant
+
+* Test compound adjacent snps
+** Test Case
+           7  10
+           v  v
+*ref:* ATCGATATGGCGCGCAT
+     .......**........
+*alt:* ATCGATAtgGCGCGCAT
+
+*ref:* TTAGATTCGATCGGGCA
+     .................
+*alt:* TTAGATTCGATCGGGCA
+
+** Variant Sequence
+CGATA prev anchor
+ GATAt
+  ATAtg
+   TAtgG
+    AtgGC
+     tgGCG
+      gGCGC
+       GCGCG next anchor
+
+** Correct vcf line
+CHROM = contig
+POS = 7
+ID = 6
+REF = TG
+ALT = tg
+INFO/TYPE = COMPOUND
+INFO/END = 10
+INFO/COUNT = 55
+INFO/KMERS = CGATA,GATAt,ATAtg,TAtgG,AtgGC,tgGCG,gGCGC,GCGCG
+
+* Test compound DEL-SNP
+** Test Case
+           7  10
+           v  v
+*ref:* ATCGATATGGCGCGCAT
+     .......*D........
+*alt:* ATCGATAt-GCGCGCAT
+
+*ref:* TTAGATTCGATCGGGCA
+     .................
+*alt:* TTAGATTCGATCGGGCA
+
+** Variant Sequence
+CGATA prev anchor
+ GATAt
+  ATAt-G
+   TAt-GC
+    At-GCG
+     t-GCGC
+       GCGCG next anchor
+
+** Correct VCF line
+CHROM = contig
+POS = 7
+ID = 7
+REF = TG
+ALT = t-
+INFO/TYPE = COMPOUND
+INFO/END = 10
+INFO/COUNT = 100
+INFO/KMERS = CGATA,GATAt,ATAtG,TAtGC,AtGCG,tGCGC,GCGCG
+
+* Test compound snp-ins
+** Test Case
+           7  9
+           v  v
+*ref:* ATCGATAT-GGCGCGCAT
+     .......*I.........
+*alt:* ATCGATAtgGGCGCGCAT
+
+*ref:* TTAGATTCGATCGGGCA
+     .................
+*alt:* TTAGATTCGATCGGGCA
+
+** Variant Sequence
+CGATA prev anchor
+ GATAt
+  ATAtg
+   TAtgG
+    AtgGG
+     tgGGC
+      gGGCG
+       GGCGC post anchor
+
+** Correct VCF line
+CHROM = contig
+POS = 7
+ID = 8
+REF = T-
+ALT = tg
+INFO/TYPE = COMPOUND
+INFO/END = 9
+INFO/COUNT 1001
+INFO/KMERS = CGATA,GATAt,ATAtg,TAtgG,AtgGG,tgGGC,gGGCG,GGCGC

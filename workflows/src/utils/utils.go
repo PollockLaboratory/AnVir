@@ -30,7 +30,7 @@ type Interval struct {
 // A and B, discarding combinations if B occurs before A.
 func IntervalCartesionProduct(A []Interval, B []Interval) []Pair[Interval, Interval]{
 	// we expect len of A/B to be small
-	intervals := make([]Pair[Interval, Interval], len(A)*len(B))
+	intervals := make([]Pair[Interval, Interval], 0, len(A)*len(B))
 
 	for _, a := range A {
 		for _, b := range B {
@@ -74,6 +74,7 @@ func max(a int, b int) int {
 func AlignSequences(ref string, alt string) (string, string){
 	width := max(len(ref), len(alt))
 
+	// use emboss needleman-wunsch implementation
 	out, err := exec.Command("bash", "-c", fmt.Sprintf(
 		`needle -asequence asis:%s -bsequence asis:%s -auto -awidth3 %d -stdout |
 			grep -v '#' | grep -v '^$'`,
