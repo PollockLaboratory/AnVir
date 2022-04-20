@@ -375,7 +375,6 @@ func (vars *Variants) clearCurrent() {
 	vars.currentvar = nil
 	vars.currentvar = new(variant)
 	vars.currentvar.Init()
-	// vars.currentvar.Clear()
 }
 
 // Addhaps adds a haplotype to vars
@@ -427,7 +426,7 @@ func (vars *Variants) Print() {
 
 // Print outputs variant info using the variant match structure
 func (vars *Variants) MatchPrint() {
-	matchoutfile := vars.Outfile + "2"
+	matchoutfile := vars.Outfile + "Match.xls"
 	fmt.Println("Opening Variant  Output File", matchoutfile)
 	fvout, _ := os.Create(matchoutfile)
 	defer fvout.Close()
@@ -443,9 +442,7 @@ func (vars *Variants) MatchPrint() {
 		for n := range vars.matches[p].key1 {
 			for m := range vars.matches[p].key1[n].key2 {
 				vinfo = vars.matches[p].key1[n].key2[m]
-				// varcount = vars.varcount[i]
-				varcount = 100000
-				// messing a bit, thinking about whether i is correct or should be
+				varcount = 100000 // fix this hack 4/6/22
 				vinfo.Print(varcount, vars.minprint, vwriter)
 			}
 		}
@@ -477,7 +474,6 @@ func (vars *Variants) Read(varfile string, mincount int) {
 		if linecount == 0 {
 		} else if linecount == 1 { // get header location information
 			prev = Index(tokens, "prev")
-			// next = Index(tokens, "next")
 			ID = Index(tokens, "VariantID")
 			count = Index(tokens, "count")
 			fmt.Println("location of prev ID count", prev, ID, count)
@@ -488,7 +484,6 @@ func (vars *Variants) Read(varfile string, mincount int) {
 			thisID, _ := strconv.Atoi(tokens[ID])
 			vars.currentvar.ID = thisID
 			enddeviants := elements
-			//if thiscount >= mincount {
 			for i := prev + 1; i < elements-1; i++ { // this is a hack in case there are blank elements
 				if tokens[i] == "" {
 					enddeviants = i
@@ -500,17 +495,18 @@ func (vars *Variants) Read(varfile string, mincount int) {
 			}
 			pretotal := vars.total
 			vars.addref(tokens[enddeviants-1]) // add last element as "next"
-			if linecount < 4300 {
-				fmt.Println("info X ", linecount, thiscount, thisID, elements, vars.total, vars.varcount[vars.total-1], tokens[enddeviants-1], enddeviants)
-			}
 			if vars.total > pretotal {
+				if linecount < 4300 {
+					fmt.Println("info A ", linecount, thiscount, thisID, elements, vars.total)
+					fmt.Println("info Y ", vars.varcount[vars.total-1])
+					fmt.Println("info Z ", tokens[enddeviants-1], enddeviants)
+				}
 				vars.varcount[vars.total-1] = thiscount // edited to increase based on thisID, vars.total
 				vinfo := vars.varlist[vars.total-1]
 				fmt.Println("check vinfo", vinfo.prev, "next", vinfo.next)
 			} else {
-				fmt.Println("variant was not added, matched earlier", thisID, vars.total)
+				// fmt.Println("variant was not added, matched earlier", thisID, vars.total)
 			}
-			//}
 		} // end read in variant line
 		linecount++
 	}
@@ -550,9 +546,8 @@ func (h *haplo) Init() {
 func (h *haplo) varsToBits() {
 	if h.bitset == nil {
 		h.bitset = bitsy.New()
-	} // should have been initialized alread though?
+	} // should have been initialized already though?
 	for vID := range h.variants {
-		// fmt.Println("variant position, id, and haplotype bitset", vID, h.variants[vID], h.bitset)
 		h.bitset.Add(h.variants[vID])
 	}
 	h.bitstring = h.bitset.String()
@@ -607,7 +602,6 @@ func (haps *Haplotypes) Print(mode int) {
 	for i := 0; i < len(haps.haplist); i++ {
 		hinfo = haps.haplist[i]
 		hcount := hinfo.hapcount
-		//		if hcount >= haps.minprint {
 		if hcount >= 0 {
 			fmt.Fprintf(hwriter, "%d\t%d\t%s\t", hinfo.ID, hcount, hinfo.bitstring)
 			if mode > 1 {
@@ -636,8 +630,6 @@ func (haps *Haplotypes) EdgePrint(edgefile string) {
 	for i := 0; i < len(haps.haplist); i++ {
 		hinfo = haps.haplist[i]
 		hcount := hinfo.hapcount
-		// fmt.Println("printing ID count", i, hinfo.ID, hcount, hinfo.bitstring)
-		//		if hcount >= haps.minprint {
 		if hcount >= 0 { // temporary until hcount is sensible
 			fmt.Fprintf(hwriter, "%d\t%d\t%s\t%s\t", hinfo.ID, hcount, hinfo.bitstring, hinfo.status)
 			childcount := len(hinfo.children)
@@ -727,10 +719,8 @@ func (haps *Haplotypes) addnew(bitset *bitsy.Set, bitstr string, status string) 
 		newhap.bitstring = bitstr
 		newhap.status = status
 		haps.haplist = append(haps.haplist, newhap) // add currhap to list of haplotypes
-		// newhap.ID = len(haps.haplist) - 1           // Added Jan 30 2020 but how was this ever working?
-		haps.hapset[bitstr] = newhap // add currhap to bitset hash
+		haps.hapset[bitstr] = newhap                // add currhap to bitset hash
 		haps.hapset[bitstr].hapcount = haps.hapset[bitstr].hapcount + 1
-		// earlier, newhap.hapcount += 1
 		haps.currenthap = new(haplo) // this may be a holdover
 		haps.currenthap.Init()
 		haps.total++
@@ -769,18 +759,15 @@ func (haps *Haplotypes) AllCombos(hinfo *haplo, varlist []int, parent *haplo, pr
 		parentstring := "nothing"
 		newvarlist := make([]int, 0)
 		newvarlist = append(varlist, hinfo.variants[j])
-		//fmt.Println("printing child", bitstr)
 		for variant := range newvarlist {
 			parentbit := new(bitsy.Set)
 			parentbit.Set(combobit)
 			parentbit.Delete(newvarlist[variant])
 			parentstring = parentbit.String()
-			//fmt.Println("printing parent", variant, newvarlist[variant], hinfo.variants[j], parentstring, bitstr)
 			haps.addhap(parentbit, parentstring)
 			parent = haps.hapset[parentstring]
 			parent.children[bitstr] = child
 		}
-		//fmt.Println("to all combos", hinfo.bitstring, child.bitstring, j, parentstring)
 		haps.AllCombos(hinfo, newvarlist, child, combobit, j)
 	}
 }
@@ -800,7 +787,6 @@ func (haps *Haplotypes) Combos(hapmincombo int) {
 		hinfo.status = "orig"
 		hinfo.lineage_count = 1
 		hinfo.descend_count = haps.haplist[i].hapcount
-		// hinfo.testprint("X7897", i)
 	}
 	numhaps := len(haps.haplist) // we add to haplist, but we only want to scroll base haplist
 	for i := 0; i < numhaps; i++ {
@@ -835,7 +821,6 @@ func (k *oligo) Init(kmer string, kcount int) {
 	k.revcomp = rc(kmer)
 	k.kcount = kcount
 	k.poses = make([]int, 0)
-	// fmt.Println("Added k.poses", k.name)
 }
 
 // oligos holds kmer map of all kmers, tracks length and total kmers
@@ -893,14 +878,13 @@ type QSeqMatches struct {
 func (kmers *Oligos) Getoutfile(infile string) {
 	base := strings.SplitN(infile, ".", 2)
 	strlen := strconv.Itoa(kmers.klen)
-	kmers.Outfile = kmers.Outfile + strlen + "_" + base[0] + ".xls"
+	kmers.Outfile = kmers.Outfile + strlen + "_" + base[0] + ".kcounts"
 }
 
 // GetoutfileMulti outputs kmer counts and positions
 func (kmers *Oligos) GetoutfileMulti(kcountpre string, basename string, directory string) {
-	//base := strings.SplitN(infile, ".", 2)
 	strlen := strconv.Itoa(kmers.klen)
-	kmers.Outfile = directory + kcountpre + strlen + "_" + basename + ".xls"
+	kmers.Outfile = directory + kcountpre + strlen + "_" + basename + ".kcounts"
 }
 
 // Kprint outputs kmer counts
@@ -959,14 +943,10 @@ func (kmers *Oligos) Kposprint(outfile string, kmin int, kmax int) {
 
 	fmt.Fprintln(kwriter, "kmer\tcount\tpositions")
 	for kmer, kcount := range kmers.kcount { // fix this so works with structure
-		//fmt.Fprintf(kwriter, "%s\t%d\t%d\t%d\t%d\n", kmer, kcount, kmin, kmax, kmers.printNs)
 		if (kcount >= kmin) && (kmers.printNs || (!strings.Contains(kmer, "N"))) {
-			//fmt.Fprintf(kwriter, "%s first round\n", kmer)
 			if kmers.kmap[kmer] != nil {
 				poses := kmers.kmap[kmer].poses
-				//fmt.Fprintf(kwriter, "%s second round %s\n", kmer, poses)
 				if (poses != nil) && (kcount < kmax) && (kcount >= kmin) {
-					//fmt.Fprintf(kwriter, "%s third round\n", kmer)
 					fmt.Fprintf(kwriter, "%s\t%d", kmer, kcount)
 					for i := range poses {
 						fmt.Fprintf(kwriter, "\t%d", poses[i])
@@ -1006,8 +986,6 @@ func (kmers *Oligos) Readk(kcountfile string) {
 			kinfo.revcomp = rc(kmer)
 			kmers.rmap[kinfo.revcomp] = kinfo
 			kinfo.poses = make([]int, 0) // imagining option to max pos at 10
-
-			//fmt.Println(kmer,"\t",count)
 		}
 		linecount++
 	}
@@ -1060,8 +1038,7 @@ func (kmers *Oligos) PrintPrimers(outfile string) {
 func (qnotkmers *Oligos) QueryNotRefRC(kmers *Oligos, qmers *Oligos, kqmers *Oligos, dorevcomp bool) {
 	for qmer, _ := range qmers.kcount {
 		origimer := qmer
-		orcmer := rc(qmer) // original but rc
-		//fmt.Println("two primers", origimer, orcmer)
+		orcmer := rc(qmer)           // original but rc
 		qmer = strings.ToUpper(qmer) // counting lower case will only happen when it hits
 		rcmer := rc(qmer)
 		// kinfo :=
@@ -1140,14 +1117,9 @@ func (kmers *Oligos) kadd(kmer string, kpos int) {
 	var kinfo *oligo
 	if _, ok := kmers.kmap[kmer]; !ok {
 		kmers.kmap[kmer] = new(oligo)
-		// kinfo = kmers.kmap[kmer]
-		// kinfo.name = kmer
-		// kinfo.revcomp = rc(kmer)
-		// kinfo.poses = make([]int) // imagining option to max pos at 10
 	}
 	kinfo = kmers.kmap[kmer] // have to reassign because out of loop
 	kinfo.kcount += 1
-	//kinfo.poses = append(kinfo.poses, kpos)
 }
 
 //
@@ -1162,7 +1134,6 @@ func (seqs *Sequences) SeqKprint(outfile string, kmers *Oligos) {
 	kwriter := bufio.NewWriter(fkout)
 	defer kwriter.Flush() // need this to get output
 
-	//fmt.Println("checking ", seqs.seqfilter, len(seqs.seqfilter))
 	for seqname, filter := range seqs.seqfilter {
 		klist := filter.klist
 		//		fmt.Println("checking ", seqname, filter, klist)
@@ -1217,12 +1188,10 @@ func (seqs *Sequences) SeqQKprint(outfile string, kmers *Oligos, refmers *Oligos
 	kwriter := bufio.NewWriter(fkout)
 	defer kwriter.Flush() // need this to get output
 
-	//fmt.Println("checking ", seqs.seqfilter, len(seqs.seqfilter))
 	fmt.Fprintln(kwriter, "kmer\tcount\trefpos\tpos\torient\tseqname")
 	for seqname, filter := range seqs.seqfilter {
 		klist := filter.klist
 		olist := filter.olist
-		//		fmt.Println("checking ", seqname, filter, klist)
 		if klist != nil {
 			for pos, kinfo := range klist {
 				poses := kinfo.poses
@@ -1239,7 +1208,8 @@ func (seqs *Sequences) SeqQKprint(outfile string, kmers *Oligos, refmers *Oligos
 //
 
 //
-// new copies to manage FindVar to avoid messing up other functions that rely on them
+// some of these are basically duplicated but done so to avoid messing thing up between
+// tagvars and haploscan (which call VarFind and HaploBuilder, respectively)
 //
 
 // addref2 adds ref kmer prev or next according to whether prev already exists
@@ -1287,14 +1257,12 @@ func (vars *Variants) addref(kmer string) {
 		vinfo.prev = kmer
 	} else {
 		vinfo.next = kmer
-		//fmt.Println("closing current line with kmer ", kmer)
 		vars.closecurrent()
 	}
 }
 
 // addnonref adds kmer to list of non reference (deviant) kmers for current variant
 func (vars *Variants) addnonref(kmer string) {
-	//fmt.Println("adding non reference ", kmer)
 	vinfo := vars.currentvar
 	vinfo.deviants = append(vinfo.deviants, kmer)
 }
@@ -1354,46 +1322,29 @@ func (vars *Variants) Increment(vinfo *variant) {
 	vars.varcount[ID-1]++
 }
 
-// closecurrent closes out the current variant and either saves it to variant list or
-// adds it to the previously existing tag path (prev,next, and midmer)
+// closecurrent tries to find old info for currentvar
+// if !vars.free and oldinfo is found, adds the variant to haplotypes
+// 		and clears currentvar
 func (vars *Variants) closecurrent() {
-	// fmt.Println("closing current variant", len(vars.varlist))
 	vinfo := vars.currentvar
-	oldinfo := vars.getVarMatch(vinfo) // if new info, returns vinfo or nil if not free to add
-	if vars.free {
-		if oldinfo == vinfo {
-			// fmt.Println("finish new variant by adding to vars and clearing currentvar")
-			vars.AddNewVariant(vinfo) // currentvar/vinfo is the new variant; adds ID, etc/ currentvar clear
-		} else { // sets count for this variant at 1; updated later by Read() if needed
-			vars.varcount[oldinfo.ID-1]++
-		}
-	}
-
+	oldinfo := vars.getVarMatch(vinfo)    // if new info, returns vinfo or nil if not free to add
 	if !vars.free && (oldinfo != vinfo) { // build haplotype if recognized variant
 		vars.AddVarToHaps(oldinfo) // only adds if not nil
 	}
-	// fmt.Println("closing current variant, ", vars.free, vinfo, oldinfo)
-	// fmt.Println()
-	// fmt.Println(" current variant closed", len(vars.varlist), vars.total)
 	vars.clearCurrent() // set currentvar to nil (hopefully garbage collect) and Init
 }
 
 // closecurrentdenovo closes out the current variant and either saves it to variant list or
 // adds it to the previously existing tag path (prev,next, and midmer)
 func (vars *Variants) closecurrentdenovo() {
-	// fmt.Println("closing current variant", len(vars.varlist))
 	vinfo := vars.currentvar
 	oldinfo := vars.getVarMatch(vinfo) // if new info, returns vinfo or nil if not free to add
 	if vars.free && (oldinfo == vinfo) {
-		// fmt.Println("finish new variant by adding to vars and clearing currentvar")
 		vars.AddNewVariant(vinfo) // currentvar/vinfo is the new variant; adds ID, etc/ currentvar clear
 	} // sets count for this variant at 1; updated later by Read() if needed
 	if !vars.free && (oldinfo != vinfo) { // build haplotype if recognized variant
 		vars.AddVarToHaps(oldinfo) // only adds if not nil
 	}
-	// fmt.Println("closing current variant, ", vars.free, vinfo, oldinfo)
-	// fmt.Println()
-	// fmt.Println(" current variant closed", len(vars.varlist), vars.total)
 	vars.clearCurrent() // set currentvar to nil (hopefully garbage collect) and Init
 }
 
@@ -1411,25 +1362,15 @@ func (vars *Variants) AddNewVariant(vinfo *variant) {
 }
 
 // AddVarToHaps takes input variant, and adds to haplotype list
-// this will build the current haplotype, so need to remember to close it out
-// testing out use of bits
 func (vars *Variants) AddVarToHaps(vinfo *variant) {
 	if vars.haps == nil {
 		fmt.Println("tried to add to nil haplotypes, this is a problem. ")
 	} else if vinfo == nil {
-		//fmt.Println("tried to add nil variant to haplotypes, this is a problem. ")
-		// this happens all the time fix this warning!
+		//fmt.Println("vinfo is nil ")
+		// this happens all the time so no warning!
 	} else {
 		hinfo := vars.haps.currenthap
-		//fmt.Println("la de da")
 		hinfo.variants = append(hinfo.variants, vinfo.ID)
-		// fmt.Println("we are trying to add to current haplotype", vars.haps.total, len(hinfo.variants), vinfo.ID)
-
-		// doing this later with complete variant list
-		//if hinfo.bitset == nil {
-		//hinfo.bitset = bitsy.New()
-		//}
-		//hinfo.bitset.Add(vinfo.ID)
 	}
 }
 
@@ -1440,7 +1381,9 @@ func (vars *Variants) closecurrenthap() {
 	if haps == nil && !vars.free {
 		fmt.Println("tried to add to close haplotypes, this probably shouldn't have happened ")
 	} else {
+		//numvars := len(currhap.variants)
 		currhap.varsToBits() // create haplotype bitset
+		//fmt.Println("just made it a bitstring ", currhap.bitstring, numvars)
 		currbits := currhap.bitstring
 		prevhap := haps.hapset[currbits]
 		if prevhap == nil {
@@ -1458,25 +1401,20 @@ func (vars *Variants) closecurrenthap() {
 // Countnonref counts non reference kmers in string, adds to stored counts in kmers
 func (kmers *Oligos) Countnonref(seqs *Sequences, seq string, name string, refmers *Oligos, vars *Variants) {
 	var kmer string
-	//var refcount = 0
 	for i := 0; i < (len(seq) - kmers.klen + 1); i++ {
 		kmer = seq[i : i+kmers.klen]
 		if refmers.kcount[kmer] > 0 { // no filter in place on refmer; these are mostly 1
 			vars.addref(kmer)
 		} else {
-			//fmt.Println("nonref to be added ", len(vars.currentvar.deviants), vars.total)
 			vars.addnonref(kmer)
-			//fmt.Println("nonref added ", len(vars.currentvar.deviants), vars.total)
 			if kmers.kmap[kmer] == nil {
 				kmers.kmap[kmer] = new(oligo)
 				kmers.kmap[kmer].Init(kmer, kmers.kcount[kmer])
 			}
-			//			kinfo := kmers.kmap[kmer]
 			kmers.kcount[kmer]++
 			kmers.total++
 		}
 	}
-	//fmt.Println("ref kmers found ", refcount)
 
 	// create remnant in case it needs to be pre-pendend to next sequence fragment
 	nextpos := len(seq) - kmers.klen + 1
@@ -1650,14 +1588,12 @@ func (seqs *Sequences) VarFind(kmers *Oligos, refmers *Oligos, vars *Variants) {
 		}
 	}
 	vars.closecurrent() // otherwise last variant left hanging
-	fmt.Println("Lines counted\n", count, lcount)
+	fmt.Println("Seqs and Lines counted\n", count, lcount)
 }
 
-// Tardigrading reads fasta or fastq file and compares kmers to reference
-// stretches of non-reference kmers are recorded as pre-variants
-// killing the filter for now
-// I added the haplotype creation stuff to this
-func (seqs *Sequences) Tardigrading(kmers *Oligos, refmers *Oligos, vars *Variants) {
+// HapBuilder reads fasta or fastq file, finds known non-ref variants
+// and adds the to a growing haplotype which is closed at the end of the sequence
+func (seqs *Sequences) HapBuilder(kmers *Oligos, refmers *Oligos, vars *Variants) {
 	var name, seq string
 	var count, lcount int
 
@@ -1673,7 +1609,7 @@ func (seqs *Sequences) Tardigrading(kmers *Oligos, refmers *Oligos, vars *Varian
 		entrylimit = 1
 	}
 	fmt.Println("File type is ", seqs.filetype, "and entry limit is", entrylimit)
-	fmt.Println("In Targdigrading, not filtering ")
+	fmt.Println("In HapBuilder, not filtering ")
 
 	// read, record, count kmers
 	for scanner.Scan() {
@@ -1697,7 +1633,6 @@ func (seqs *Sequences) Tardigrading(kmers *Oligos, refmers *Oligos, vars *Varian
 					entrycount++
 					if lcount > seqs.linemin {
 						kmers.Countnonref(seqs, seq, name, refmers, vars)
-						//kmers.Countmers(seqs, seq, seqs.record, name)
 					}
 				}
 			}
@@ -1707,7 +1642,7 @@ func (seqs *Sequences) Tardigrading(kmers *Oligos, refmers *Oligos, vars *Varian
 	}
 	vars.closecurrent()    // otherwise last variant left hanging
 	vars.closecurrenthap() // otherwise last haplotype left hanging
-	fmt.Println("Lines counted\n", count, lcount)
+	fmt.Println("Seqs and Lines counted\n", count, lcount)
 }
 
 //
@@ -2114,12 +2049,8 @@ func (city *City) addtobeds(kstart int, klen int) {
 	if city.newbedlast > 0 { // a bed is open
 		newgap := city.chrompos + kstart - city.newbedlast
 		if newgap <= city.maxgap {
-			//test := city.chrompos + kstart + klen
-			//fmt.Println("condition:start.cpos,last,gaps,newgap,test",kstart,city.chrompos,city.newbedlast,city.maxgap,newgap, test)
 			city.newbedlast = city.chrompos + kstart + klen
 		} else {
-			//test := city.chrompos + kstart + klen
-			//fmt.Println("\nclosing bed and open new",kstart,city.chrompos,city.newbedlast,city.maxgap,newgap, test)
 			city.closebed()
 			city.openbed(kstart, kstart+klen)
 		}
