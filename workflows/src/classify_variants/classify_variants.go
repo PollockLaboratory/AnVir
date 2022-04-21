@@ -2,7 +2,7 @@ package classify_variants
 
 import (
 	"bufio"
-	"fmt"
+	// "fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -31,7 +31,7 @@ type Variant struct {
 
 	// alt seq at the genomic position
 	// snp: base, del: DEL, ins: inserted sequence,
-	// compound: aligned seq to the ref (TODO need to flesh out this repr)
+	// compound: aligned seq to the ref
 	alt_allele string    
 }
 
@@ -57,7 +57,6 @@ func MergeDeviants(variant_seq []string, k int) string{
 func ClassifyVariant(variant_seq []string, k int,
 		windowed_ref *fastaseq.WindowedReference,
 		contiguous_ref *fastaseq.ContiguousReference) []Variant{
-	fmt.Printf("%+v", windowed_ref)
 	
 	// get anchor sequences
 	n := len(variant_seq)
@@ -69,15 +68,6 @@ func ClassifyVariant(variant_seq []string, k int,
 	post_intervals := windowed_ref.Query(post_anchor)
 	interval_pairs := utils.IntervalCartesionProduct(
 		pre_intervals, post_intervals)
-	fmt.Println("================================================")
-	fmt.Printf("pre anchor %+v\n", pre_anchor)
-	fmt.Printf("pre interval %+v\n", pre_intervals)
-	fmt.Printf("post anchor %+v\n", post_anchor)
-	fmt.Printf("post interval %+v\n", post_intervals)
-	fmt.Println("================================================")
-	fmt.Printf("interval pairs %+v\n", interval_pairs)
-	fmt.Println("================================================")
-	// fmt.Println("queried interval: ", anchors.Fst.End + 1, anchors.Snd.Start - 1)
 
 	// safe to assume at most 3 possibilities since chances
 	// of both pre/post intervals aligning to more than 1
@@ -137,9 +127,6 @@ func ClassifyVariant(variant_seq []string, k int,
 		// to catch snps/dels/ins variants that occur in this interval
 		ref_seq := contiguous_ref.Query(anchors.Fst.Start + 1, anchors.Snd.End - 1)
 		ref_align, alt_align := utils.AlignSequences(ref_seq, merged_deviants)
-		fmt.Printf("ref_seq = %s\n", ref_seq)
-		fmt.Printf("ref_align = %s\n", ref_align)
-		fmt.Printf("alt_align = %s\n", alt_align)
 		variants = append(variants, Variant{
 			start: anchors.Fst.End,
 			end:   anchors.Snd.Start,
