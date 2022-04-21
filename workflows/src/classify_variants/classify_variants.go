@@ -2,7 +2,7 @@ package classify_variants
 
 import (
 	"bufio"
-	// "fmt"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -54,6 +54,7 @@ func MergeDeviants(variant_seq []string, k int) string{
 // and the set of deviant sequences, determine the variant type/genomic position.
 // In some cases there could be multiple possible variants return if the anchor
 // sequences align to multiple places in the reference in a valid way.
+// TODO filter out things that are clearly too long (ie spurious mapping to ref)
 func ClassifyVariant(variant_seq []string, k int,
 		windowed_ref *fastaseq.WindowedReference,
 		contiguous_ref *fastaseq.ContiguousReference) []Variant{
@@ -99,6 +100,8 @@ func ClassifyVariant(variant_seq []string, k int,
 
 		// Simple DEL ---------------------------------------------------------
 		if n_deviants == k - 1 && len(merged_deviants) == 2*k-2 {
+			// TODO if I prove that the above 2 properties are equivalient,
+			// then I can remove one of those
 			variants = append(variants, Variant{
 				start: anchors.Fst.End + 1,
 				end: anchors.Snd.Start - 1,
@@ -109,8 +112,27 @@ func ClassifyVariant(variant_seq []string, k int,
 			})
 			continue
 		}
-		// Simple INS ---------------------------------------------------------
 		if ref_distance == 0 {
+		// deletion of repetetive sequence
+			if n_deviants < k {
+			
+			}
+		// Simple INS ---------------------------------------------------------
+			fmt.Println("===================================================================")
+			fmt.Println("DEBUG INFO")
+			fmt.Println("===================================================================")
+			fmt.Printf("ID: %d\n", ID)
+			fmt.Printf("interval_pairs: %+v\n", interval_pairs)
+			fmt.Printf("anchors.Fst: %+v\n", anchors.Fst)
+			i := 0
+			for ;i < n; i++ {
+				fmt.Printf("%d:\t%s%s\n", i, strings.Repeat(" ", i), variant_seq[i])
+			}
+			fmt.Printf("anchors.Snd: %+v\n", anchors.Snd)
+			fmt.Printf("merged_deviants: %s\n", merged_deviants)
+			fmt.Printf("len(merged_deviants): %d\n", len(merged_deviants))
+			fmt.Printf("slice range: [%d, %d)\n", k-1, len(merged_deviants)-k+1)
+			fmt.Println("===================================================================")
 			variants = append(variants, Variant{
 				start: anchors.Fst.End, // 1 before the ins
 				end: anchors.Snd.Start, // 1 after the ins
@@ -171,6 +193,7 @@ func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 		variantID := fields[ID]
 		count := fields[COUNT]
 		variant_seq := fields[SEQ:]
+		fmt.Printf("%s\n", variantID)
 
 		// get possible variants from this set of deviants
 		variants := ClassifyVariant(variant_seq , k, windowed_ref, contiguous_ref)

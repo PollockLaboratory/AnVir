@@ -102,6 +102,8 @@ INFO/END = 27
 INFO/COUNT = 42
 INFO/KMERS = TTTAG,TTAGT,TAGTC,AGTCG,GTCGG,TCGGG
 
+
+
 * Test single ins length 1
 ** Test Case
                12 13
@@ -278,3 +280,70 @@ INFO/TYPE = COMPOUND
 INFO/END = 9
 INFO/COUNT 1001
 INFO/KMERS = CGATA,GATAt,ATAtg,TAtgG,AtgGG,tgGGC,gGGCG,GGCGC
+
+
+* Test compound DEL-INS
+** Notes
+This test case fails.  Why? the test case has a deletion and an insertion of
+similar length.  The algorithm seeks the alignment with the optimal
+score, and there is a higher penalty for initiating a gap in the
+alignments than for a substitution.  Given the way variants are detected,
+this doesn't seem avoidable so I'll let it slide, and just rely on the fact,
+that these types of events are exceedingly rare.
+** Test Case
+
+*ref:* ATCGAAATGGCGCGCAT
+     .................
+*alt:* ATCGAAATGGCGCGCAT
+
+        22     25
+         v     v
+*ref:* TTAGATT---CGATCGGGCA
+     .....DDIII..........
+*alt:* TTAGA--atgCGATCGGGCA
+
+** Variant Sequence
+TTAGA prev anchor
+ TAGA--a
+  AGA--at
+   GA--atg
+    A--atgC
+     --atgCG
+        tgCGA
+         gCGAT
+          CGATC next anchor
+
+** Correct VCF line
+CHROM = contig
+POS = 22
+ID = 9
+REF = TT---
+ALT = --atg
+INFO/TYPE = COMPOUND
+INFO/END = 25
+INFO/COUNT = 0
+INFO/KMERS = TTAGA,TAGAa,AGAat,GAatg,AatgC,atgCG,tgCGA,gCGAT,CGATC
+
+
+
+* Test deletion in repetetive region
+note: not using test fasta
+*ref:* TTTTTGGGTGTTTATTACCACAAAAACA
+                =------= repeat of TTA
+
+What if TTA is deleted? Which one is it the real one?
+In this case there are 2 possible deletions
+
+*ref:* TTTTTGGGTGTTTATTACCACAAAAACA
+     TTTTTGGGTGTTTA..............
+      TTTTGGGTGTTTAC.............
+       TTTGGGTGTTTACC............
+        TTGGGTGTTTACCA...........
+            TGGGTGTTTACCAC.......
+             GGGTGTTTACCACA......
+              GGTGTTTACCACAA.....
+               GTGTTTACCACAAA....
+                TGTTTACCACAAAA...
+                 GTTTACCACAAAAA..
+                  TTTACCACAAAAAC.
+                   TTACCACAAAAACA

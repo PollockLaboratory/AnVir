@@ -9,3 +9,4 @@ VariantID	ID2	count	name	ID	devnum	prev	deviants	next
 6	blah_ID2	55	blah_name	blah_devnum	CGATA	GATAt	ATAtg	TAtgG	AtgGC	tgGCG	gGCGC	GCGCG
 7	blah_ID2	100	blah_name	blah_devnum	CGATA	GATAt	ATAtG	TAtGC	AtGCG	tGCGC	GCGCG
 8	blah_ID2	1001	blah_name	blah_devnum	CGATA	GATAt	ATAtg	TAtgG	AtgGG	tgGGC	gGGCG	GGCGC
+9	blah_ID2	0	blah_name	blah_devnum	TTAGA	TAGAa	AGAat	GAatg	AatgC	atgCG	tgCGA	gCGAT	CGATC

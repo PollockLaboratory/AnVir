@@ -1,6 +1,7 @@
 package utils_test
 
 import (
+	"annotation/utils"
 	. "annotation/utils"
 	"reflect"
 	"testing"
@@ -67,9 +68,20 @@ func TestInervalCartesianProduct(t *testing.T) {
 	})
 }
 
+func TestSuffixPrefixOverlap(t *testing.T) {
+	A := "QRSTUAAT"
+	B := "AATUVXYZ"
+	correct := "AAT"
+	result := utils.SuffixPrefixOverlap(A, B)
+	if result != correct {
+		t.Errorf("\ncorrect: %s\nresult: %s\n", correct, result)
+	}
+}
+
 func BenchmarkAlignSequences(b *testing.B) {
 	ref := "AAATGGGATCGATCGATCCCCCCCGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGAGAGAGAGGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCG"
 	alt := "AAACCCGGGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGG"
 
 	AlignSequences(ref, alt)
 }
+

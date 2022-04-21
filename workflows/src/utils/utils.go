@@ -87,3 +87,15 @@ func AlignSequences(ref string, alt string) (string, string){
 
 	return ref_alignment, alt_alignment
 }
+
+func SuffixPrefixOverlap(A string, B string) string {
+	// assuming A, B are the same length
+	// Find the max overlapping suffix of A and prefix of B.
+	n := len(A)
+	for i := range(A) {
+		if A[i:] == B[:n-i] {
+			return A[i:]
+		}
+	}
+	return ""
+}
