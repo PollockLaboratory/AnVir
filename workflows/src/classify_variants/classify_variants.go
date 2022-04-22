@@ -2,7 +2,7 @@ package classify_variants
 
 import (
 	"bufio"
-	"fmt"
+	// "fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -80,10 +80,11 @@ func ClassifyVariant(variant_seq []string, k int,
 		ref_distance := anchors.Snd.Start - anchors.Fst.End - 1
 		n_deviants := n - 2
 
-		// Simple SNP ---------------------------------------------------------
+		// TODO add to end of chain probably spurious mapping of an anchor seq
+		// if ref_distance > 100 {
+		// 	continue
 		if ref_distance == 1 && n_deviants == k {
-
-			// fmt.Println("queried interval: ", anchors.Fst.End + 1, anchors.Snd.Start - 1)
+			/// Simple SNP
 			variants = append(variants, Variant{
 				start: anchors.Fst.End + 1, // start == end 
 				end: anchors.Fst.End + 1,
@@ -93,13 +94,9 @@ func ClassifyVariant(variant_seq []string, k int,
 					anchors.Fst.End + 1),
 				alt_allele: string(variant_seq[1][k-1]),
 			})
-			continue
-		}
-
-		merged_deviants := MergeDeviants(variant_seq, k)
-
-		// Simple DEL ---------------------------------------------------------
-		if n_deviants == k - 1 && len(merged_deviants) == 2*k-2 {
+		} else if merged_deviants := MergeDeviants(variant_seq, k);
+		n_deviants == k - 1 && len(merged_deviants) == 2*k-2 {
+			// Simple DEL ------------------------------------------------------
 			// TODO if I prove that the above 2 properties are equivalient,
 			// then I can remove one of those
 			variants = append(variants, Variant{
@@ -110,52 +107,73 @@ func ClassifyVariant(variant_seq []string, k int,
 					anchors.Fst.End + 1, anchors.Snd.Start - 1),
 				alt_allele: "DEL",
 			})
-			continue
-		}
-		if ref_distance == 0 {
-		// deletion of repetetive sequence
+		} else if ref_distance == 0 {
+			/// DEL of repeated sequence
+			// for example
+			//	ref: GGCTGAATAATACGTG
+			//  alt: GGCTG---AATACGTG
+			//  The location of the DEL is ambiguous so, we report two DELs
 			if n_deviants < k {
-			
+				// The max overlapping suffix/prefix of the pre/post anchor
+				// sequences will give us the repeat sequence that was deleted
+				// the deletion either occured in the suffix of the pre anchor
+				// or the prefix of the post anchor.
+				del_seq := utils.SuffixPrefixOverlap(pre_anchor, post_anchor)
+				variants = append(variants, Variant{
+					start: anchors.Fst.End - len(del_seq) + 1,
+					end: anchors.Fst.End,
+					variant_type: "DEL_REPEAT", // should this be its own type?
+					ref_allele: del_seq,
+					alt_allele: "DEL",
+				})
+				variants = append(variants, Variant{
+					start: anchors.Snd.Start,
+					end: anchors.Snd.Start + len(del_seq) - 1,
+					variant_type: "DEL_REPEAT", // should this be its own type?
+					ref_allele: del_seq,
+					alt_allele: "DEL",
+				})
+			} else {
+				/// Simple INS
+				// fmt.Println("===================================================================")
+				// fmt.Println("DEBUG INFO")
+				// fmt.Println("===================================================================")
+				// fmt.Printf("ID: %d\n", ID)
+				// fmt.Printf("interval_pairs: %+v\n", interval_pairs)
+				// fmt.Printf("anchors.Fst: %+v\n", anchors.Fst)
+				// i := 0
+				// for ;i < n; i++ {
+				// 	fmt.Printf("%d:\t%s%s\n", i, strings.Repeat(" ", i), variant_seq[i])
+				// }
+				// fmt.Printf("anchors.Snd: %+v\n", anchors.Snd)
+				// fmt.Printf("merged_deviants: %s\n", merged_deviants)
+				// fmt.Printf("len(merged_deviants): %d\n", len(merged_deviants))
+				// fmt.Printf("slice range: [%d, %d)\n", k-1, len(merged_deviants)-k+1)
+				// fmt.Println("===================================================================")
+				variants = append(variants, Variant{
+					start: anchors.Fst.End, // 1 before the ins
+					end: anchors.Snd.Start, // 1 after the ins
+					variant_type: "INS",
+					ref_allele: "INS",
+					alt_allele: merged_deviants[k-1:len(merged_deviants)-k+1],
+				})
 			}
-		// Simple INS ---------------------------------------------------------
-			fmt.Println("===================================================================")
-			fmt.Println("DEBUG INFO")
-			fmt.Println("===================================================================")
-			fmt.Printf("ID: %d\n", ID)
-			fmt.Printf("interval_pairs: %+v\n", interval_pairs)
-			fmt.Printf("anchors.Fst: %+v\n", anchors.Fst)
-			i := 0
-			for ;i < n; i++ {
-				fmt.Printf("%d:\t%s%s\n", i, strings.Repeat(" ", i), variant_seq[i])
-			}
-			fmt.Printf("anchors.Snd: %+v\n", anchors.Snd)
-			fmt.Printf("merged_deviants: %s\n", merged_deviants)
-			fmt.Printf("len(merged_deviants): %d\n", len(merged_deviants))
-			fmt.Printf("slice range: [%d, %d)\n", k-1, len(merged_deviants)-k+1)
-			fmt.Println("===================================================================")
+		} else if ref_distance < 100 {
+			// catch all case for any type of compound variant --------------------
+			// take the merged_deviant sequence whose genomic interval will be
+			// (anchors.Fst.Start+1) to (anchors.Snd.End-1) (1-based closed)
+			// and its associated reference sequence and perform global alignment
+			// to catch snps/dels/ins variants that occur in this interval
+			ref_seq := contiguous_ref.Query(anchors.Fst.Start + 1, anchors.Snd.End - 1)
+			ref_align, alt_align := utils.AlignSequences(ref_seq, merged_deviants)
 			variants = append(variants, Variant{
-				start: anchors.Fst.End, // 1 before the ins
-				end: anchors.Snd.Start, // 1 after the ins
-				variant_type: "INS",
-				ref_allele: "INS",
-				alt_allele: merged_deviants[k-1:len(merged_deviants)-k+1],
+				start: anchors.Fst.End,
+				end:   anchors.Snd.Start,
+				variant_type: "COMPOUND",
+				ref_allele: ref_align[k-1:len(ref_align)-k+1],
+				alt_allele: alt_align[k-1:len(alt_align)-k+1],
 			})
-			continue
 		}
-		// catch all case for any type of compound variant --------------------
-		// take the merged_deviant sequence whose genomic interval will be
-		// (anchors.Fst.Start+1) to (anchors.Snd.End-1) (1-based closed)
-		// and its associated reference sequence and perform global alignment
-		// to catch snps/dels/ins variants that occur in this interval
-		ref_seq := contiguous_ref.Query(anchors.Fst.Start + 1, anchors.Snd.End - 1)
-		ref_align, alt_align := utils.AlignSequences(ref_seq, merged_deviants)
-		variants = append(variants, Variant{
-			start: anchors.Fst.End,
-			end:   anchors.Snd.Start,
-			variant_type: "COMPOUND",
-			ref_allele: ref_align[k-1:len(ref_align)-k+1],
-			alt_allele: alt_align[k-1:len(alt_align)-k+1],
-		})
 	}
 	return variants
 }
@@ -193,7 +211,7 @@ func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 		variantID := fields[ID]
 		count := fields[COUNT]
 		variant_seq := fields[SEQ:]
-		fmt.Printf("%s\n", variantID)
+		// fmt.Printf("%s\n", variantID)
 
 		// get possible variants from this set of deviants
 		variants := ClassifyVariant(variant_seq , k, windowed_ref, contiguous_ref)
