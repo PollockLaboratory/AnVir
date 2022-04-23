@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec" // execute bash commands
@@ -53,6 +54,7 @@ func Check(e error) {
 	}
 }
 
+
 // I wonder what this function does?
 func LineCount(filename string) int {
 	f, err := os.Open(filename)
@@ -70,7 +72,12 @@ func max(a int, b int) int {
 	return b
 }
 
-func AlignSequences(ref string, alt string) (string, string){
+func AlignSequences(ref string, alt string) (string, string, error){
+	if _, err := exec.LookPath("needle"); err != nil {
+		return "", "", errors.New(
+			"Emboss - needle executable not found in PATH")
+	}
+	
 	width := max(len(ref), len(alt))
 
 	// use emboss needleman-wunsch implementation
@@ -84,7 +91,7 @@ func AlignSequences(ref string, alt string) (string, string){
 	ref_alignment := strings.Fields(A[0])[2]
 	alt_alignment := strings.Fields(A[2])[2]
 
-	return ref_alignment, alt_alignment
+	return ref_alignment, alt_alignment, nil
 }
 
 func SuffixPrefixOverlap(A string, B string) string {

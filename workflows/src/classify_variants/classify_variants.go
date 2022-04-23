@@ -3,9 +3,12 @@ package classify_variants
 import (
 	"bufio"
 	// "fmt"
+	"path/filepath"
 	"os"
 	"strconv"
 	"strings"
+	// TODO use: https://github.com/pkg/errors
+	arg "github.com/alexflint/go-arg"
 
 	"annotation/fastaseq"
 	"annotation/utils"
@@ -17,6 +20,17 @@ const N_HEADER = 2
 const ID = 0
 const COUNT = 2
 const SEQ = 5
+
+type cliargs struct {
+	Reference string `arg:"--reference,required,help:Reference fasta."`
+	Variants  string `arg:"--variants,required,help:Variants table."`
+	Outfile   string `arg:"--outfile,required,help:Output vcf"`
+	K         int    `arg:"-k,required,help:kmer length"`
+}
+func (c cliargs) Description() string {
+	return "Classify variants provided in {variants} with respect to the {reference}.  Output vcf is writen to stdout."
+}
+
 
 type Variant struct {
     // genomic interval of variant
@@ -165,7 +179,8 @@ func ClassifyVariant(variant_seq []string, k int,
 			// and its associated reference sequence and perform global alignment
 			// to catch snps/dels/ins variants that occur in this interval
 			ref_seq := contiguous_ref.Query(anchors.Fst.Start + 1, anchors.Snd.End - 1)
-			ref_align, alt_align := utils.AlignSequences(ref_seq, merged_deviants)
+			ref_align, alt_align, err := utils.AlignSequences(ref_seq, merged_deviants)
+			utils.Check(err)
 			variants = append(variants, Variant{
 				start: anchors.Fst.End,
 				end:   anchors.Snd.Start,
@@ -232,14 +247,19 @@ func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 	}
 }
 
-/// TODO put in separate package
-// func main() {
-// 	var variants_file *string = flag.String("variants", "", "Path to variants file")
-// 	var ref_fasta *string = flag.String("ref", "", "Path to ref fasta")
-// 	flag.Parse()
-// 	if *variants_file == "" { panic("variants filename not provided") }
-// 	if *ref_fasta == "" { panic("ref fasta not provided") }
+func Main() {
+	cli := cliargs{}
+	arg.MustParse(&cli)
 
-// 	parse_variants(*variants_file, *ref_fasta, 14)
+	outpath, err := filepath.Abs(cli.Outfile)
+	utils.Check(err)
 
-// }
+	varpath, err := filepath.Abs(cli.Variants)
+	utils.Check(err)
+
+	refpath, err := filepath.Abs(cli.Reference)
+	utils.Check(err)
+
+	out, err := os.Create(outpath)
+	GetVariants(varpath, refpath, cli.K, out)
+}
