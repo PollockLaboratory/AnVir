@@ -2,16 +2,19 @@ package classify_variants
 
 import (
 	"bufio"
-	// "fmt"
-	"path/filepath"
+	"fmt"
 	"os"
+	"path/filepath"
+	// "runtime"
 	"strconv"
 	"strings"
+	"sync"
+
 	// TODO use: https://github.com/pkg/errors
 	arg "github.com/alexflint/go-arg"
 
 	"annotation/fastaseq"
-	"annotation/utils"
+	. "annotation/utils"
 	"annotation/vcf"
 )
 
@@ -25,7 +28,7 @@ type cliargs struct {
 	Reference string `arg:"--reference,required,help:Reference fasta."`
 	Variants  string `arg:"--variants,required,help:Variants table."`
 	Outfile   string `arg:"--outfile,required,help:Output vcf"`
-	K         int    `arg:"-k,required,help:kmer length"`
+	K         int    `arg:"--k,required,help:kmer length"`
 }
 func (c cliargs) Description() string {
 	return "Classify variants provided in {variants} with respect to the {reference}.  Output vcf is writen to stdout."
@@ -33,6 +36,10 @@ func (c cliargs) Description() string {
 
 
 type Variant struct {
+	// basic metadata
+	id string    
+	count string // its read as string so why bother right? :)
+
     // genomic interval of variant
 	start int
 	end int
@@ -48,6 +55,23 @@ type Variant struct {
 	// compound: aligned seq to the ref
 	alt_allele string    
 }
+
+func debug_info(id string, anchors Pair[Interval, Interval],
+		variant_seq []string, k int) {
+	fmt.Println("=============================================================")
+	fmt.Println("DEBUG INFO")
+	fmt.Println("=============================================================")
+	fmt.Printf("ID: %s\n", id)
+	// fmt.Printf("interval_pairs: %+v\n", interval_pairs)
+	fmt.Printf("anchors.Fst: %+v\n", anchors.Fst)
+	i := 0
+	for ;i < len(variant_seq); i++ {
+		fmt.Printf("%d:\t%s%s\n", i, strings.Repeat(" ", i), variant_seq[i])
+	}
+	fmt.Printf("anchors.Snd: %+v\n", anchors.Snd)
+	fmt.Println("=============================================================")
+}
+
 
 // Take the deviant sequences and merge into a single string.
 func MergeDeviants(variant_seq []string, k int) string{
@@ -68,8 +92,7 @@ func MergeDeviants(variant_seq []string, k int) string{
 // and the set of deviant sequences, determine the variant type/genomic position.
 // In some cases there could be multiple possible variants return if the anchor
 // sequences align to multiple places in the reference in a valid way.
-// TODO filter out things that are clearly too long (ie spurious mapping to ref)
-func ClassifyVariant(variant_seq []string, k int,
+func ClassifyVariant(id string, count string, variant_seq []string, k int,
 		windowed_ref *fastaseq.WindowedReference,
 		contiguous_ref *fastaseq.ContiguousReference) []Variant{
 	
@@ -81,7 +104,7 @@ func ClassifyVariant(variant_seq []string, k int,
 	// get all possible "alginments" of the pre/post anchors
 	pre_intervals := windowed_ref.Query(pre_anchor)
 	post_intervals := windowed_ref.Query(post_anchor)
-	interval_pairs := utils.IntervalCartesionProduct(
+	interval_pairs := IntervalCartesionProduct(
 		pre_intervals, post_intervals)
 
 	// safe to assume at most 3 possibilities since chances
@@ -91,6 +114,9 @@ func ClassifyVariant(variant_seq []string, k int,
 
 	// for each pair classify the variant
 	for _, anchors := range interval_pairs {
+
+		// debug_info(id, anchors, variant_seq, k)
+
 		ref_distance := anchors.Snd.Start - anchors.Fst.End - 1
 		n_deviants := n - 2
 
@@ -100,6 +126,7 @@ func ClassifyVariant(variant_seq []string, k int,
 		if ref_distance == 1 && n_deviants == k {
 			/// Simple SNP
 			variants = append(variants, Variant{
+				id: id, count: count,
 				start: anchors.Fst.End + 1, // start == end 
 				end: anchors.Fst.End + 1,
 				variant_type: "SNP",
@@ -114,6 +141,7 @@ func ClassifyVariant(variant_seq []string, k int,
 			// TODO if I prove that the above 2 properties are equivalient,
 			// then I can remove one of those
 			variants = append(variants, Variant{
+				id: id, count: count,
 				start: anchors.Fst.End + 1,
 				end: anchors.Snd.Start - 1,
 				variant_type: "DEL",
@@ -132,8 +160,9 @@ func ClassifyVariant(variant_seq []string, k int,
 				// sequences will give us the repeat sequence that was deleted
 				// the deletion either occured in the suffix of the pre anchor
 				// or the prefix of the post anchor.
-				del_seq := utils.SuffixPrefixOverlap(pre_anchor, post_anchor)
+				del_seq := SuffixPrefixOverlap(pre_anchor, post_anchor)
 				variants = append(variants, Variant{
+					id: id, count: count,
 					start: anchors.Fst.End - len(del_seq) + 1,
 					end: anchors.Fst.End,
 					variant_type: "DEL_REPEAT", // should this be its own type?
@@ -141,6 +170,7 @@ func ClassifyVariant(variant_seq []string, k int,
 					alt_allele: "DEL",
 				})
 				variants = append(variants, Variant{
+					id: id, count: count,
 					start: anchors.Snd.Start,
 					end: anchors.Snd.Start + len(del_seq) - 1,
 					variant_type: "DEL_REPEAT", // should this be its own type?
@@ -149,22 +179,8 @@ func ClassifyVariant(variant_seq []string, k int,
 				})
 			} else {
 				/// Simple INS
-				// fmt.Println("===================================================================")
-				// fmt.Println("DEBUG INFO")
-				// fmt.Println("===================================================================")
-				// fmt.Printf("ID: %d\n", ID)
-				// fmt.Printf("interval_pairs: %+v\n", interval_pairs)
-				// fmt.Printf("anchors.Fst: %+v\n", anchors.Fst)
-				// i := 0
-				// for ;i < n; i++ {
-				// 	fmt.Printf("%d:\t%s%s\n", i, strings.Repeat(" ", i), variant_seq[i])
-				// }
-				// fmt.Printf("anchors.Snd: %+v\n", anchors.Snd)
-				// fmt.Printf("merged_deviants: %s\n", merged_deviants)
-				// fmt.Printf("len(merged_deviants): %d\n", len(merged_deviants))
-				// fmt.Printf("slice range: [%d, %d)\n", k-1, len(merged_deviants)-k+1)
-				// fmt.Println("===================================================================")
 				variants = append(variants, Variant{
+					id: id, count: count,
 					start: anchors.Fst.End, // 1 before the ins
 					end: anchors.Snd.Start, // 1 after the ins
 					variant_type: "INS",
@@ -179,9 +195,10 @@ func ClassifyVariant(variant_seq []string, k int,
 			// and its associated reference sequence and perform global alignment
 			// to catch snps/dels/ins variants that occur in this interval
 			ref_seq := contiguous_ref.Query(anchors.Fst.Start + 1, anchors.Snd.End - 1)
-			ref_align, alt_align, err := utils.AlignSequences(ref_seq, merged_deviants)
-			utils.Check(err)
+			ref_align, alt_align, err := AlignSequences(ref_seq, merged_deviants)
+			Check(err)
 			variants = append(variants, Variant{
+				id: id, count: count,
 				start: anchors.Fst.End,
 				end:   anchors.Snd.Start,
 				variant_type: "COMPOUND",
@@ -194,6 +211,12 @@ func ClassifyVariant(variant_seq []string, k int,
 }
 
 func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex // concurrent writes to output
+
+	// for concurrent reading of variants
+	lines := make(chan string)
 
 	// load the reference into windowed and contiguous query structures
 	windowed_ref := fastaseq.LoadWindowedReference(ref_fasta, k)
@@ -210,7 +233,7 @@ func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 		Write(out)
 
 	f, err := os.Open(variants_file)
-	utils.Check(err)
+	Check(err)
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 
@@ -218,33 +241,50 @@ func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 	for i := 0; i <= N_HEADER; i++ {
 		scanner.Scan()
 	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for scanner.Scan() {
+			lines <- scanner.Text()
+		}
+		close(lines)
+	} ()
  
 	// Parse the variants file, classify, write to vcf (stdout)
-	for i:= 0; scanner.Scan(); i++ {
-		// get relevant info from the variants table (tab separated)
-		fields := strings.Fields(scanner.Text())
-		variantID := fields[ID]
-		count := fields[COUNT]
-		variant_seq := fields[SEQ:]
-		// fmt.Printf("%s\n", variantID)
+	for text := range lines {
+		wg.Add(1)
+		go func(text string) {
+			defer wg.Done()
+			// get relevant info from the variants table (tab separated)
+			fields := strings.Fields(text)
+			variantID := fields[ID]
+			count := fields[COUNT]
+			variant_seq := fields[SEQ:]
+			// fmt.Printf("%s\n", variantID)
 
-		// get possible variants from this set of deviants
-		variants := ClassifyVariant(variant_seq , k, windowed_ref, contiguous_ref)
-		for _, v := range variants {
-			vcf.VcfRecord().
-				SetChrom(contiguous_ref.Contig).
-				SetPos(v.start).
-				SetID(variantID).
-				SetRef(v.ref_allele).
-				SetAlt(v.alt_allele).
-				SetQual(".").SetFilter(".").
-				AddInfo("TYPE", []string{v.variant_type}).
-				AddInfo("END", []string{strconv.Itoa(v.end)}).
-				AddInfo("COUNT", []string{count}).
-				AddInfo("KMERS", variant_seq).
-				Write(out)
-		}
+			// get possible variants from this set of deviants
+			// TODO send the ID/count into the func and add fields to Variant struct
+			variants := ClassifyVariant(variantID, count, variant_seq, k,
+				windowed_ref, contiguous_ref)
+			mu.Lock()
+			for _, v := range variants {
+				vcf.VcfRecord().
+					SetChrom(contiguous_ref.Contig).
+					SetPos(v.start).
+					SetID(v.id).
+					SetRef(v.ref_allele).
+					SetAlt(v.alt_allele).
+					SetQual(".").SetFilter(".").
+					AddInfo("TYPE", []string{v.variant_type}).
+					AddInfo("END", []string{strconv.Itoa(v.end)}).
+					AddInfo("COUNT", []string{v.count}).
+					AddInfo("KMERS", variant_seq).
+					Write(out)
+			}
+			mu.Unlock()
+		}(text)
 	}
+	wg.Wait()
 }
 
 func Main() {
@@ -252,13 +292,13 @@ func Main() {
 	arg.MustParse(&cli)
 
 	outpath, err := filepath.Abs(cli.Outfile)
-	utils.Check(err)
+	Check(err)
 
 	varpath, err := filepath.Abs(cli.Variants)
-	utils.Check(err)
+	Check(err)
 
 	refpath, err := filepath.Abs(cli.Reference)
-	utils.Check(err)
+	Check(err)
 
 	out, err := os.Create(outpath)
 	GetVariants(varpath, refpath, cli.K, out)

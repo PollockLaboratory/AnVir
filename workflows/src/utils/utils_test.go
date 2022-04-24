@@ -1,7 +1,7 @@
 package utils_test
 
 import (
-	"annotation/utils"
+	"fmt"
 	. "annotation/utils"
 	"reflect"
 	"testing"
@@ -72,7 +72,7 @@ func TestSuffixPrefixOverlap(t *testing.T) {
 	A := "QRSTUAAT"
 	B := "AATUVXYZ"
 	correct := "AAT"
-	result := utils.SuffixPrefixOverlap(A, B)
+	result := SuffixPrefixOverlap(A, B)
 	if result != correct {
 		t.Errorf("\ncorrect: %s\nresult: %s\n", correct, result)
 	}
@@ -81,7 +81,6 @@ func TestSuffixPrefixOverlap(t *testing.T) {
 func BenchmarkAlignSequences(b *testing.B) {
 	ref := "AAATGGGATCGATCGATCCCCCCCGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGAGAGAGAGGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCG"
 	alt := "AAACCCGGGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGGGAGAGAGAGG"
-
-	AlignSequences(ref, alt)
+	fmt.Println(AlignSequences(ref, alt))
 }
 
