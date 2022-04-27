@@ -1,6 +1,7 @@
 package classify_variants_test
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -145,66 +146,48 @@ func TestClassifyVariant(t *testing.T) {
 	// there could be multiple ways to align. I'm just testing the
 	// basic functionality of this component, but it'll give the
 	// right alignment most of the time in regions that aren't too complex.
-	// t.Run("COMPOUND-ADJ-SNPs@:7-10", func(t *testing.T) {
-	// 	out, _ := exec.Command(
-	// 		"bcftools", "view", "-i", "ID=\"6\"", "-H", path).CombinedOutput()
-	// 	Check(err)
-	// 	correct := []string{
-	// 		"contig", "7", "6", "TG", "tg", ".", ".",
-	// 		"TYPE=COMPOUND;END=10;COUNT=55;KMERS=CGATA,GATAt,ATAtg,TAtgG,AtgGC,tgGCG,gGCGC,GCGCG",
-	// 	}
-	// 	result := strings.Fields(string(out))
-	// 	if !reflect.DeepEqual(result, correct) {
-	// 		t.Errorf("\nCORRECT:\n%s\nRESULT\n%s", correct, result)
-	// 	}
-	// })
-	// t.Run("COMPOUND-SNP-DEL@:7-10", func(t *testing.T) {
-	// 	out, _ := exec.Command(
-	// 		"bcftools", "view", "-i", "ID=\"7\"", "-H", path).CombinedOutput()
-	// 	Check(err)
-	// 	correct := []string{
-	// 		"contig", "7", "7", "TG", "t-", ".", ".",
-	// 		"TYPE=COMPOUND;END=10;COUNT=100;KMERS=CGATA,GATAt,ATAtG,TAtGC,AtGCG,tGCGC,GCGCG",
-	// 	}
-	// 	result := strings.Fields(string(out))
-	// 	if !reflect.DeepEqual(result, correct) {
-	// 		t.Errorf("\nCORRECT:\n%s\nRESULT\n%s", correct, result)
-	// 	}
-	// })
-	// t.Run("COMPOUND-SNP-INS@:7-10", func(t *testing.T) {
-	// 	out, _ := exec.Command(
-	// 		"bcftools", "view", "-i", "ID=\"8\"", "-H", path).CombinedOutput()
-	// 	Check(err)
-	// 	correct := []string{
-	// 		"contig", "7", "8", "T-", "tg", ".", ".",
-	// 		"TYPE=COMPOUND;END=9;COUNT=1001;KMERS=CGATA,GATAt,ATAtg,TAtgG,AtgGG,tgGGC,gGGCG,GGCGC",
-	// 	}
-	// 	result := strings.Fields(string(out))
-	// 	if !reflect.DeepEqual(result, correct) {
-	// 		t.Errorf("\nCORRECT:\n%s\nRESULT\n%s", correct, result)
-	// 	}
-	// })
+	t.Run("COMPOUND-ADJ-SNPs@:7-10", func(t *testing.T) {
+		out, _ := exec.Command(
+			"bcftools", "view", "-i", "ID=\"6\"", "-H", path).CombinedOutput()
+		Check(err)
+		correct := []string{
+			"contig", "7", "6", "TG", "tg", ".", ".",
+			"TYPE=COMPOUND;END=10;COUNT=55;KMERS=CGATA,GATAt,ATAtg,TAtgG,AtgGC,tgGCG,gGCGC,GCGCG",
+		}
+		result := strings.Fields(string(out))
+		if !reflect.DeepEqual(result, correct) {
+			t.Errorf("\nCORRECT:\n%s\nRESULT\n%s", correct, result)
+		}
+	})
+	t.Run("COMPOUND-SNP-DEL@:7-10", func(t *testing.T) {
+		out, _ := exec.Command(
+			"bcftools", "view", "-i", "ID=\"7\"", "-H", path).CombinedOutput()
+		Check(err)
+		correct := []string{
+			"contig", "7", "7", "TG", "t-", ".", ".",
+			"TYPE=COMPOUND;END=10;COUNT=100;KMERS=CGATA,GATAt,ATAtG,TAtGC,AtGCG,tGCGC,GCGCG",
+		}
+		result := strings.Fields(string(out))
+		if !reflect.DeepEqual(result, correct) {
+			t.Errorf("\nCORRECT:\n%s\nRESULT\n%s", correct, result)
+		}
+	})
+	t.Run("COMPOUND-SNP-INS@:7-10", func(t *testing.T) {
+		out, _ := exec.Command(
+			"bcftools", "view", "-i", "ID=\"8\"", "-H", path).CombinedOutput()
+		Check(err)
+		correct := []string{
+			"contig", "7", "8", "T-", "tg", ".", ".",
+			"TYPE=COMPOUND;END=9;COUNT=1001;KMERS=CGATA,GATAt,ATAtg,TAtgG,AtgGG,tgGGC,gGGCG,GGCGC",
+		}
+		result := strings.Fields(string(out))
+		if !reflect.DeepEqual(result, correct) {
+			t.Errorf("\nCORRECT:\n%s\nRESULT\n%s", correct, result)
+		}
+	})
+	// TODO add test where len(merged_deviants) < k
 
 
-	// This fails.  Why? the test case has a deletion and an insertion of
-	// similar length.  The algorithm seeks the alignment with the optimal
-	// score, and there is a higher penalty for initiating a gap in the
-	// alignments than for a substitution.  Given the way variants are detected,
-	// this doesn't seem avoidable so I'll let it slide, and just rely on the fact,
-	// that these types of events are exceedingly rare.
-	// t.Run("COMPOUND-DEL-INS@:22-25", func(t *testing.T) {
-	// 	out, _ := exec.Command(
-	// 		"bcftools", "view", "-i", "ID=\"9\"", "-H", path).CombinedOutput()
-	// 	Check(err)
-	// 	correct := []string{
-	// 		"contig", "22", "9", "TT---", "--atg", ".", ".",
-	// 		"TYPE=COMPOUND;END=25;COUNT=0;KMERS=TTAGA,TAGAa,AGAat,GAatg,AatgC,atgCG,tgCGA,gCGAT,CGATC",
-	// 	}
-	// 	result := strings.Fields(string(out))
-	// 	if !reflect.DeepEqual(result, correct) {
-	// 		t.Errorf("\nCORRECT:\n%s\nRESULT\n%s", correct, result)
-	// 	}
-	// })
 
 }
 
@@ -213,14 +196,15 @@ func TestClassifyVariant(t *testing.T) {
 // ============================================================================
 
 func BenchmarkVariantClassification(b *testing.B) {
-	test_fasta, _ := filepath.Abs("../../NC_045512.2.fasta")
+	test_fasta, _ := filepath.Abs("../../data/NC_045512.2.fasta")
 	test_variants, _ := filepath.Abs(
-		"../../variants7M_3500Mline_7.64Mgenomes_min100.tsv")
+		"../../data/variants7M_3500Mline_7.64Mgenomes_min100.tsv")
 	path, _ := filepath.Abs("test_data/benchmark.vcf")
 	out, err := os.Create(path)
 	defer out.Close()
 	Check(err)
-	runtime.GOMAXPROCS(8)
+	runtime.GOMAXPROCS(1)
+	fmt.Println("running")
 	classify_variants.GetVariants(test_variants, test_fasta, 14, out)
 }
 

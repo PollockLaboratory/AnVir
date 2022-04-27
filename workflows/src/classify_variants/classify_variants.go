@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+
 	// "runtime"
 	"strconv"
 	"strings"
 	"sync"
 
-	// TODO use: https://github.com/pkg/errors
 	arg "github.com/alexflint/go-arg"
 
 	"annotation/fastaseq"
@@ -28,6 +29,7 @@ type cliargs struct {
 	Reference string `arg:"--reference,required,help:Reference fasta."`
 	Variants  string `arg:"--variants,required,help:Variants table."`
 	Outfile   string `arg:"--outfile,required,help:Output vcf"`
+	Threads   int    `arg:"--threads,help:n concurrent threads."`
 	K         int    `arg:"--k,required,help:kmer length"`
 }
 func (c cliargs) Description() string {
@@ -56,19 +58,39 @@ type Variant struct {
 	alt_allele string    
 }
 
+// Use this function to print some basic debug_info about the variant
+// to diagnose issues that come up during testing
 func debug_info(id string, anchors Pair[Interval, Interval],
+		contiguous_ref *fastaseq.ContiguousReference,
 		variant_seq []string, k int) {
+
+	merged_deviants := MergeDeviants(variant_seq, k)
+	len_merged := len(merged_deviants)
+
+	// ref seq between the anchors
+	ref_seq := contiguous_ref.Query(anchors.Fst.End + 1, anchors.Snd.Start - 1)
+
 	fmt.Println("=============================================================")
 	fmt.Println("DEBUG INFO")
 	fmt.Println("=============================================================")
 	fmt.Printf("ID: %s\n", id)
-	// fmt.Printf("interval_pairs: %+v\n", interval_pairs)
 	fmt.Printf("anchors.Fst: %+v\n", anchors.Fst)
 	i := 0
 	for ;i < len(variant_seq); i++ {
 		fmt.Printf("%d:\t%s%s\n", i, strings.Repeat(" ", i), variant_seq[i])
 	}
 	fmt.Printf("anchors.Snd: %+v\n", anchors.Snd)
+	fmt.Println("-------------------------------------------------------------")
+	fmt.Println("len ref_seq: ", len(ref_seq))
+	fmt.Println("n:", len_merged)
+	fmt.Println("k-1:", k-1)
+	fmt.Println("n-k+1:", len_merged-k+1)
+	fmt.Println("ref interval: ", anchors.Fst.End + 1, anchors.Snd.Start - 1)
+	fmt.Println("ref with anchors: ",
+		contiguous_ref.Query(anchors.Fst.Start, anchors.Snd.End))
+	fmt.Println("merged deviants:   ", merged_deviants)
+	alt_seq := merged_deviants[k-1:len_merged-k+1]
+	fmt.Println("alt_seq: ", alt_seq)
 	fmt.Println("=============================================================")
 }
 
@@ -149,35 +171,36 @@ func ClassifyVariant(id string, count string, variant_seq []string, k int,
 					anchors.Fst.End + 1, anchors.Snd.Start - 1),
 				alt_allele: "DEL",
 			})
-		} else if ref_distance == 0 {
+		} else if n_deviants < k {
 			/// DEL of repeated sequence
-			// for example
-			//	ref: GGCTGAATAATACGTG
-			//  alt: GGCTG---AATACGTG
-			//  The location of the DEL is ambiguous so, we report two DELs
-			if n_deviants < k {
-				// The max overlapping suffix/prefix of the pre/post anchor
-				// sequences will give us the repeat sequence that was deleted
-				// the deletion either occured in the suffix of the pre anchor
-				// or the prefix of the post anchor.
-				del_seq := SuffixPrefixOverlap(pre_anchor, post_anchor)
-				variants = append(variants, Variant{
-					id: id, count: count,
-					start: anchors.Fst.End - len(del_seq) + 1,
-					end: anchors.Fst.End,
-					variant_type: "DEL_REPEAT", // should this be its own type?
-					ref_allele: del_seq,
-					alt_allele: "DEL",
-				})
-				variants = append(variants, Variant{
-					id: id, count: count,
-					start: anchors.Snd.Start,
-					end: anchors.Snd.Start + len(del_seq) - 1,
-					variant_type: "DEL_REPEAT", // should this be its own type?
-					ref_allele: del_seq,
-					alt_allele: "DEL",
-				})
-			} else {
+			// TODO test further
+			// for example:
+			// ref: GGCTGAATAATACGTG
+			// alt: GGCTG---AATACGTG
+			// The location of the DEL is ambiguous so, we report two DELs
+			// The max overlapping suffix/prefix of the pre/post anchor
+			// sequences will give us the repeat sequence that was deleted
+			// the deletion either occured in the suffix of the pre anchor
+			// or the prefix of the post anchor.
+			del_seq := SuffixPrefixOverlap(pre_anchor, post_anchor)
+			variants = append(variants, Variant{
+				id: id, count: count,
+				start: anchors.Fst.End - len(del_seq) + 1,
+				end: anchors.Fst.End,
+				variant_type: "DEL_REPEAT", // should this be its own type?
+				ref_allele: del_seq,
+				alt_allele: "DEL",
+			})
+			variants = append(variants, Variant{
+				id: id, count: count,
+				start: anchors.Snd.Start,
+				end: anchors.Snd.Start + len(del_seq) - 1,
+				variant_type: "DEL_REPEAT", // should this be its own type?
+				ref_allele: del_seq,
+				alt_allele: "DEL",
+			})
+			
+		} else if ref_distance == 0 {
 				/// Simple INS
 				variants = append(variants, Variant{
 					id: id, count: count,
@@ -187,23 +210,21 @@ func ClassifyVariant(id string, count string, variant_seq []string, k int,
 					ref_allele: "INS",
 					alt_allele: merged_deviants[k-1:len(merged_deviants)-k+1],
 				})
-			}
 		} else if ref_distance < 100 {
 			// catch all case for any type of compound variant --------------------
-			// take the merged_deviant sequence whose genomic interval will be
-			// (anchors.Fst.Start+1) to (anchors.Snd.End-1) (1-based closed)
-			// and its associated reference sequence and perform global alignment
-			// to catch snps/dels/ins variants that occur in this interval
-			ref_seq := contiguous_ref.Query(anchors.Fst.Start + 1, anchors.Snd.End - 1)
-			ref_align, alt_align, err := AlignSequences(ref_seq, merged_deviants)
+			// TODO add more variety of tests
+			len_merged := len(merged_deviants)
+			ref_seq := contiguous_ref.Query(anchors.Fst.End + 1, anchors.Snd.Start - 1)
+			alt_seq := merged_deviants[k-1:len_merged-k+1]
+			ref_align, alt_align, err := AlignSequences(ref_seq, alt_seq, true)
 			Check(err)
 			variants = append(variants, Variant{
 				id: id, count: count,
 				start: anchors.Fst.End,
 				end:   anchors.Snd.Start,
 				variant_type: "COMPOUND",
-				ref_allele: ref_align[k-1:len(ref_align)-k+1],
-				alt_allele: alt_align[k-1:len(alt_align)-k+1],
+				ref_allele: ref_align,
+				alt_allele: alt_align,
 			})
 		}
 	}
@@ -213,10 +234,8 @@ func ClassifyVariant(id string, count string, variant_seq []string, k int,
 func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 
 	var wg sync.WaitGroup
-	var mu sync.Mutex // concurrent writes to output
-
-	// for concurrent reading of variants
-	lines := make(chan string)
+	var mu sync.Mutex // for concurrent writes to output
+	lines := make(chan string) // for concurrent reading of variants
 
 	// load the reference into windowed and contiguous query structures
 	windowed_ref := fastaseq.LoadWindowedReference(ref_fasta, k)
@@ -275,10 +294,10 @@ func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 					SetRef(v.ref_allele).
 					SetAlt(v.alt_allele).
 					SetQual(".").SetFilter(".").
-					AddInfo("TYPE", []string{v.variant_type}).
-					AddInfo("END", []string{strconv.Itoa(v.end)}).
-					AddInfo("COUNT", []string{v.count}).
-					AddInfo("KMERS", variant_seq).
+					AddInfo("TYPE", v.variant_type).
+					AddInfo("END", strconv.Itoa(v.end)).
+					AddInfo("COUNT", v.count).
+					AddInfo("KMERS", variant_seq...).
 					Write(out)
 			}
 			mu.Unlock()
@@ -288,8 +307,10 @@ func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 }
 
 func Main() {
-	cli := cliargs{}
+	cli := cliargs{Threads: 1}
 	arg.MustParse(&cli)
+
+	runtime.GOMAXPROCS(cli.Threads)
 
 	outpath, err := filepath.Abs(cli.Outfile)
 	Check(err)

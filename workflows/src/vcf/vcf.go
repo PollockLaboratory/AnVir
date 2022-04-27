@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"strconv"
 )
 
 
@@ -77,24 +78,12 @@ func (hd *Header)Write(f *os.File) {
 /// VCF record
 // ============================================================================
 
-type InfoRecord struct {
-	Name string
-	Values []string // just keep them as strings (ie no type checking)
-}
+// type InfoRecord struct {
+// 	Name string
+// 	Values []string // just keep them as strings (ie no type checking)
+// }
 
-// return name=value(,) formatted info field
-func (i *InfoRecord)str() string {
-	return fmt.Sprintf("%s=%s", i.Name, strings.Join(i.Values, ","))
-}
 
-// return ';' delimited list of info fields
-func format_info(fields []InfoRecord) string {
-	s := make([]string, 0, len(fields))
-	for _, f := range fields {
-		s = append(s, f.str())
-	}
-	return strings.Join(s, ";")
-}
 
 type Record struct {
 	Chrom string
@@ -104,10 +93,15 @@ type Record struct {
 	Alt string
 	Qual string
 	Filter string
-	Info []InfoRecord
+	infokeys []string // interlal list of keys
+	Info map[string][]string
 }
 func VcfRecord() *Record {
-	return &Record{Info: make([]InfoRecord, 0, 3)}
+	// return &Record{Info: make([]InfoRecord, 0, 3)}
+	return &Record{
+		Info: make(map[string][]string, 3),
+		infokeys: make([]string, 0, 3),
+	}
 }
 func (r *Record)SetChrom(c string) *Record {
 	r.Chrom = c
@@ -137,13 +131,61 @@ func (r *Record)SetFilter(filter string) *Record {
 	r.Filter = filter
 	return r
 }
-func (r *Record)AddInfo(name string, values []string) *Record {
-	r.Info = append(r.Info, InfoRecord{Name: name, Values: values})
+
+// TODO change to variadic function args instead of list of string
+func (r *Record)AddInfo(name string, values ...string) *Record {
+	// r.Info = append(r.Info, InfoRecord{Name: name, Values: values})
+	r.Info[name] = values
+	r.infokeys = append(r.infokeys, name)
 	return r
 }
+
+// parse an info string and add the components to record
+func (r *Record)AddInfoFromString(info string) *Record{
+	// split into sep info fields
+	fields := strings.Split(info, ";")
+
+	// get key,value pairs and add to the record
+	for i := range fields {
+		info := strings.Split(fields[i], "=")
+		values := strings.Split(info[1], ",")
+		r.AddInfo(info[0], values...)
+	}
+	return r
+}
+
+// return ';' delimited list of info fields
+// func format_info(fields []InfoRecord) string {
+func (r *Record)format_info() string {
+	s := make([]string, 0, len(r.Info))
+	for _, k := range r.infokeys {
+		s = append(s, fmt.Sprintf("%s=%s", k, strings.Join(r.Info[k], ",")))
+	}
+	return strings.Join(s, ";")
+}
+
 func (r *Record)Write(f *os.File) {
 	fmt.Fprintf(f, "%s\t%d\t%s\t%s\t%s\t%s\t%s\t",
 		r.Chrom, r.Pos, r.ID, r.Ref,
 		r.Alt, r.Qual, r.Filter)
-	fmt.Fprintf(f, "%s\n", format_info((r.Info)))
+	fmt.Fprintf(f, "%s\n", r.format_info())
+}
+
+// ============================================================================
+/// Functions
+// ============================================================================
+
+// read line in vcf and put in data structure
+func ParseVCFRecord(line string) *Record {
+	fields := strings.Fields(line)
+	pos, _ := strconv.Atoi(fields[1])
+	return VcfRecord().
+		SetChrom(fields[0]).
+		SetPos(pos).
+		SetID(fields[2]).
+		SetRef(fields[3]).
+		SetAlt(fields[4]).
+		SetQual(".").
+		SetFilter(".").
+		AddInfoFromString(fields[7])
 }

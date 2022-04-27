@@ -2,11 +2,8 @@ package utils
 
 import (
 	"bufio"
-	// "errors"
 	"fmt"
 	"os"
-	// "os/exec" // execute bash commands
-	// "strings"
 
 	"github.com/biogo/biogo/align"
 	"github.com/biogo/biogo/align/matrix"
@@ -72,30 +69,42 @@ func LineCount(filename string) int {
 }
 
 
-
 // max of two ints because of course its not in the standard lib
 func max(a int, b int) int {
 	if a > b { return a }
 	return b
 }
-func AlignSequences(ref string, alt string) (string, string, error){
+
+// needlman wunch alignment for DNA or amino acid sequence
+// (specified by dna flag). We expect sequences to be short.
+func AlignSequences(ref string, alt string, dna bool) (string, string, error){
+
+	// prepare sequences
+	aseq := &linear.Seq{Seq: alphabet.BytesToLetters([]byte(ref))}
+	bseq := &linear.Seq{Seq: alphabet.BytesToLetters([]byte(alt))}
+	if dna {
+		aseq.Alpha = alphabet.DNAredundant
+		bseq.Alpha = alphabet.DNAredundant
+	} else {
+		aseq.Alpha = alphabet.Protein
+		bseq.Alpha = alphabet.Protein
+	}
 
 	// init the similarity matrix and linear
 	// component of the affine gap penalty
+	var mat [][]int
+	if dna {
+		mat = matrix.NUC_4_4
+	} else {
+		mat = matrix.BLOSUM65
+	}
 	const lin_gap = -1
-	mat := matrix.NUC_4_4
 	for i := range mat {
 		mat[i][0] = lin_gap
 	}
 	for j := range mat[0] {
 		mat[0][j] = lin_gap
 	}
-
-	// prepare sequences
-	aseq := &linear.Seq{Seq: alphabet.BytesToLetters([]byte(ref))}
-	aseq.Alpha = alphabet.DNAredundant
-	bseq := &linear.Seq{Seq: alphabet.BytesToLetters([]byte(alt))}
-	bseq.Alpha = alphabet.DNAredundant
 
 	needle := align.NWAffine{Matrix: mat, GapOpen: -10}
 	aln, err := needle.Align(aseq, bseq)

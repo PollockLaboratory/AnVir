@@ -7,10 +7,14 @@ import (
 	// "github.com/valyala/fasttemplate"
 
 	"annotation/classify_variants"
+	"annotation/queryposition"
+	"annotation/querywindow"
 )
 
 var subprograms = map[string]func(){
 	"classify": classify_variants.Main,
+	"querywindow": querywindow.Main,
+	"queryposition": queryposition.Main,
 	// add more as we get more pieces
 }
 
@@ -18,15 +22,14 @@ func printUsage() {
 	useage := `
 anvir -- usage:
 Subprograms:
-	classify
-	amino -- NOT IMPLEMENTED YET!
+	classify:    classify variants from raw deviant/anchor sequences
+	amino:       NOT IMPLEMENTED YET!
+    querywindow: sequence query reference to get genomic position of sequence
+    queryposition: given genomic position, get sequence (1-based closed interval)
 `
 	fmt.Print(useage)
 	os.Exit(1)
 }
-
-
-
 
 func main() {
 	if len(os.Args) < 2 {
@@ -38,6 +41,4 @@ func main() {
 		os.Args = append(os.Args[:1], os.Args[2:]...)
 		p()
 	}
-
-
 }
