@@ -81,7 +81,7 @@ func TestClassifyVariant(t *testing.T) {
 		Check(err)
 		correct := []string{
 			"contig", "6", "1", "T", "t", ".", ".",
-			"TYPE=SNP;END=6;COUNT=1;KMERS=ATCGA,TCGAt,CGAtA,GAtAT,AtATG,tATGG,ATGGC",
+			"VARTYPE=SNP;END=6;COUNT=1;KMERS=ATCGA,TCGAt,CGAtA,GAtAT,AtATG,tATGG,ATGGC",
 		}
 		result := strings.Fields(string(out))
 		if !reflect.DeepEqual(result, correct) {
@@ -94,7 +94,7 @@ func TestClassifyVariant(t *testing.T) {
 		Check(err)
 		correct := []string{
 			"contig", "18", "2", "T", "DEL", ".", ".",
-			"TYPE=DEL;END=18;COUNT=33;KMERS=CGCAT,GCATT,CATTA,ATTAG,TTAGA,TAGAT",
+			"VARTYPE=DEL;END=18;COUNT=33;KMERS=CGCAT,GCATT,CATTA,ATTAG,TTAGA,TAGAT",
 		}
 		result := strings.Fields(string(out))
 		if !reflect.DeepEqual(result, correct) {
@@ -107,7 +107,7 @@ func TestClassifyVariant(t *testing.T) {
 		Check(err)
 		correct := []string{
 			"contig", "22", "3", "ATTCGA", "DEL", ".", ".",
-			"TYPE=DEL;END=27;COUNT=42;KMERS=TTTAG,TTAGT,TAGTC,AGTCG,GTCGG,TCGGG",
+			"VARTYPE=DEL;END=27;COUNT=42;KMERS=TTTAG,TTAGT,TAGTC,AGTCG,GTCGG,TCGGG",
 		}
 		result := strings.Fields(string(out))
 		if !reflect.DeepEqual(result, correct) {
@@ -120,7 +120,7 @@ func TestClassifyVariant(t *testing.T) {
 		Check(err)
 		correct := []string{
 			"contig", "12", "4", "INS", "a", ".", ".",
-			"TYPE=INS;END=13;COUNT=11;KMERS=TGGCG,GGCGa,GCGaC,CGaCG,GaCGC,aCGCA,CGCAT",
+			"VARTYPE=INS;END=13;COUNT=11;KMERS=TGGCG,GGCGa,GCGaC,CGaCG,GaCGC,aCGCA,CGCAT",
 		}
 		result := strings.Fields(string(out))
 		if !reflect.DeepEqual(result, correct) {
@@ -133,7 +133,7 @@ func TestClassifyVariant(t *testing.T) {
 		Check(err)
 		correct := []string{
 			"contig", "17", "5", "INS", "abc", ".", ".",
-			"TYPE=INS;END=18;COUNT=13;KMERS=CGCAT,GCATa,CATab,ATabc,TabcT,abcTT,bcTTA,cTTAG,TTAGA",
+			"VARTYPE=INS;END=18;COUNT=13;KMERS=CGCAT,GCATa,CATab,ATabc,TabcT,abcTT,bcTTA,cTTAG,TTAGA",
 		}
 		result := strings.Fields(string(out))
 		if !reflect.DeepEqual(result, correct) {
@@ -152,7 +152,7 @@ func TestClassifyVariant(t *testing.T) {
 		Check(err)
 		correct := []string{
 			"contig", "7", "6", "TG", "tg", ".", ".",
-			"TYPE=COMPOUND;END=10;COUNT=55;KMERS=CGATA,GATAt,ATAtg,TAtgG,AtgGC,tgGCG,gGCGC,GCGCG",
+			"VARTYPE=COMPOUND;END=10;COUNT=55;KMERS=CGATA,GATAt,ATAtg,TAtgG,AtgGC,tgGCG,gGCGC,GCGCG",
 		}
 		result := strings.Fields(string(out))
 		if !reflect.DeepEqual(result, correct) {
@@ -165,7 +165,7 @@ func TestClassifyVariant(t *testing.T) {
 		Check(err)
 		correct := []string{
 			"contig", "7", "7", "TG", "t-", ".", ".",
-			"TYPE=COMPOUND;END=10;COUNT=100;KMERS=CGATA,GATAt,ATAtG,TAtGC,AtGCG,tGCGC,GCGCG",
+			"VARTYPE=COMPOUND;END=10;COUNT=100;KMERS=CGATA,GATAt,ATAtG,TAtGC,AtGCG,tGCGC,GCGCG",
 		}
 		result := strings.Fields(string(out))
 		if !reflect.DeepEqual(result, correct) {
@@ -178,7 +178,7 @@ func TestClassifyVariant(t *testing.T) {
 		Check(err)
 		correct := []string{
 			"contig", "7", "8", "T-", "tg", ".", ".",
-			"TYPE=COMPOUND;END=9;COUNT=1001;KMERS=CGATA,GATAt,ATAtg,TAtgG,AtgGG,tgGGC,gGGCG,GGCGC",
+			"VARTYPE=COMPOUND;END=9;COUNT=1001;KMERS=CGATA,GATAt,ATAtg,TAtgG,AtgGG,tgGGC,gGGCG,GGCGC",
 		}
 		result := strings.Fields(string(out))
 		if !reflect.DeepEqual(result, correct) {

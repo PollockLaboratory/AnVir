@@ -245,7 +245,7 @@ func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 	vcf.VcfHeader().
 		AddReference(ref_fasta).
 		AddContig(contiguous_ref.Contig, contiguous_ref.Length()).
-		AddInfo("TYPE", "1", "String", "Variant type.").
+		AddInfo("VARTYPE", "1", "String", "Variant type.").
 		AddInfo("END", "1", "Integer", "End position (closed interval)").
 		AddInfo("COUNT", "1", "Integer", "Number of occurrences.").
 		AddInfo("KMERS", ".", "String", "List of deviant kmer sequences bookended by the prev/next anchor sequences").
@@ -294,7 +294,7 @@ func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 					SetRef(v.ref_allele).
 					SetAlt(v.alt_allele).
 					SetQual(".").SetFilter(".").
-					AddInfo("TYPE", v.variant_type).
+					AddInfo("VARTYPE", v.variant_type).
 					AddInfo("END", strconv.Itoa(v.end)).
 					AddInfo("COUNT", v.count).
 					AddInfo("KMERS", variant_seq...).
