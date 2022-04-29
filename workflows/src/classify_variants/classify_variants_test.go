@@ -1,7 +1,7 @@
 package classify_variants_test
 
 import (
-	"fmt"
+	// "fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -203,8 +203,7 @@ func BenchmarkVariantClassification(b *testing.B) {
 	out, err := os.Create(path)
 	defer out.Close()
 	Check(err)
-	runtime.GOMAXPROCS(1)
-	fmt.Println("running")
+	runtime.GOMAXPROCS(8)
 	classify_variants.GetVariants(test_variants, test_fasta, 14, out)
 }
 

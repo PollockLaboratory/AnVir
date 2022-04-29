@@ -4,10 +4,12 @@ package amino
 
 import (
 	"bufio"
+	"compress/gzip"
 	"fmt"
 	"os"
-	"strings"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"annotation/fastaseq"
 	. "annotation/utils"
@@ -194,11 +196,11 @@ func GetChanges(ref_aa , alt_aa string, cstart int) []change {
 		} else if alt_align[i] == '-' { // deleted AA
 			changes = append(changes,
 				change{from: string(ref_align[i]),
-					to: "del", at: cstart + i})
+					to: "del", at: cstart + i + 1})
 		} else { // substitution
 			changes = append(changes,
 				change{from: string(ref_align[i]),
-					to: string(alt_align[i]), at: cstart + i})
+					to: string(alt_align[i]), at: cstart + i + 1})
 		}
 	}
 	return changes
@@ -246,14 +248,11 @@ func AminoAcidChanges(ref *fastaseq.ContiguousReference, record *vcf.Record,
 	}
 	var frameshift bool
 	if len(alt_codons) % 3 != 0 {
-		frameshift = true
+		// TODO someday find the start of shifted reading frame
+		frameshift = true 
 	}
 
 	// get amino acid sequence of ref/alt
-	// TODO return a bool for shifted reading frame
-	// TODO OR write a function that finds the start of shifted reading frame
-	// TODO add info field for the frameshift (bool?)
-	// TODO if there is a shifted reading frame then
 	ref_aa := DNA2AminoAcid(ref_codons, codon_table)
 	alt_aa := DNA2AminoAcid(alt_codons, codon_table)
 
@@ -262,3 +261,88 @@ func AminoAcidChanges(ref *fastaseq.ContiguousReference, record *vcf.Record,
 
 	return formatChanges(changes), frameshift
 }
+
+// Load bed with format Chrom  Start  End Gene
+// Returns map[gene] -> Interval
+func LoadGeneIntervals(genes_bed string) map[string]Interval{
+	path, err := filepath.Abs(genes_bed)
+	Check(err)
+
+	f, err := os.Open(path)
+	Check(err)
+	defer f.Close()
+
+	gz, err := gzip.NewReader(f)
+	Check(err)
+
+	gene_intervals := make(map[string]Interval, 12)
+
+	scanner := bufio.NewScanner(gz)
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		gene := fields[3]
+		start , _ := strconv.Atoi(fields[1])
+		end , _ := strconv.Atoi(fields[2])
+		gene_intervals[gene] = Interval{Start:start, End:end}
+	}
+	return gene_intervals
+}
+
+
+func AnnotateChanges(ref_fasta string, vcf_file string,
+		genes_bed string, codons_file string, outfile string) {
+	// write header to outfile
+	// for each variant in vcf
+	//   get aa changes
+	//   add info field
+	//   then write vcf record to outfile
+
+	/// TODO load codon table
+	/// TODO load gene intervals
+
+	ref_path, err := filepath.Abs(ref_fasta)
+	Check(err)
+	ref := fastaseq.LoadContiguousReference(ref_path)
+	fmt.Println(ref.Query(1, 2))
+
+	vcf_path, err := filepath.Abs(vcf_file)
+	Check(err)
+	v, err := os.Open(vcf_path)
+	Check(err)
+	defer v.Close()
+
+	out_path, err := filepath.Abs(outfile)
+	Check(err)
+	out, err := os.Create(out_path)
+	Check(err)
+	defer out.Close()
+
+	// capture/update header
+	vcf.ParseVCFHeader(v).
+		AddInfo("AACHANGES", ".", "String",
+			"Changes to amino acid sequence within codons spanned by variant.").
+		AddInfo("FRAMESHIFT", ".", "String",
+			"true/false - does the variant cause a frameshift mutation?").
+		Write(out)
+
+	// Annotate the variants with AA changes
+	scanner := bufio.NewScanner(v)
+	for scanner.Scan() {
+		if line := scanner.Text(); line[0] != '#' {
+			//fmt.Fprintf(os.Stderr, "Warning", a ...any)
+			record, err := vcf.ParseVCFRecord(scanner.Text())
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "**Warning**:%s\n**SKIPPING**\n\n", err)
+				continue
+			}
+			record.Write(out)
+
+			
+			change_string, frameshift := AminoAcidChanges(
+				ref, record, gene_intervals, codon_table)
+		}
+	}
+
+
+}
+

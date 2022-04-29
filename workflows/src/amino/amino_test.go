@@ -235,3 +235,11 @@ func TestDNA2AminoAcid(t *testing.T) {
 		compare(result, correct, t)
 	})
 }
+
+func TestAnnotateChanges(t *testing.T) {
+	// TODO create small synthetic data
+	ref_fasta := "../../data/NC_045512.2.fasta"
+	vcf_file := "../classify_variants/test_data/benchmark.vcf"
+	outfile := "test_data/out.vcf"
+	AnnotateChanges(ref_fasta, vcf_file, outfile)
+}

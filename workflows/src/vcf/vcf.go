@@ -6,12 +6,12 @@
 package vcf
 
 import (
+	"bufio"
 	"fmt"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 )
-
 
 // ============================================================================
 /// VCF header
@@ -35,11 +35,55 @@ type Header struct {
 	Reference string // name or path of reference genome
 }
 
-func VcfHeader() *Header{
+func VcfHeader() *Header {
 	return &Header{
 		Contigs: make([]ContigHeader, 0, 1),
 		Info: make([]InfoHeader, 0, 3),
 	}
+}
+
+// read the vcf header into Header object
+func ParseVCFHeader(v *os.File) *Header {
+	scanner := bufio.NewScanner(v)
+	header := VcfHeader()
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line[:2] == "##" {
+			field, rest, _ := strings.Cut(line, "=")
+			switch field {
+			case "##reference":
+				header.AddReference(rest)
+			case "##INFO":
+				info := InfoHeader{}
+				for _, items := range strings.Split(rest[1:len(rest)-1], ",") {
+					key, value, _ := strings.Cut(items, "=")
+					switch key {
+					case "ID": info.ID = value
+					case "Number": info.Number = value
+					case "Type": info.Type = value
+					case "Description": info.Description = value[1:len(value)-1]
+					}
+				}
+				header.Info = append(header.Info, info)
+			case "##contig":
+				contig := ContigHeader{}
+				for _, items := range strings.Split(rest[1:len(rest)-1], ",") {
+					key, value, _ := strings.Cut(items, "=")
+					switch key {
+					case "ID": contig.ID = value
+					case "length":
+						n , _ := strconv.Atoi(value)
+						contig.Length = n
+					}
+				}
+				header.Contigs = append(header.Contigs, contig)
+			}
+		} else {
+			break
+		}
+	}
+	v.Seek(0, 0)
+	return header
 }
 
 func (hd *Header)AddReference(ref string) *Header{
@@ -141,7 +185,7 @@ func (r *Record)AddInfo(name string, values ...string) *Record {
 }
 
 // parse an info string and add the components to record
-func (r *Record)AddInfoFromString(info string) *Record{
+func (r *Record)AddInfoFromString(info string) *Record {
 	// split into sep info fields
 	fields := strings.Split(info, ";")
 
@@ -153,6 +197,7 @@ func (r *Record)AddInfoFromString(info string) *Record{
 	}
 	return r
 }
+
 
 // return ';' delimited list of info fields
 // func format_info(fields []InfoRecord) string {
@@ -176,8 +221,12 @@ func (r *Record)Write(f *os.File) {
 // ============================================================================
 
 // read line in vcf and put in data structure
-func ParseVCFRecord(line string) *Record {
+func ParseVCFRecord(line string) (*Record, error) {
 	fields := strings.Fields(line)
+	if len(fields) < 8 {
+		return &Record{}, fmt.Errorf(
+			"Incorrect number of fields in the following line:\n%s", line)
+	}
 	pos, _ := strconv.Atoi(fields[1])
 	return VcfRecord().
 		SetChrom(fields[0]).
@@ -185,7 +234,7 @@ func ParseVCFRecord(line string) *Record {
 		SetID(fields[2]).
 		SetRef(fields[3]).
 		SetAlt(fields[4]).
-		SetQual(".").
-		SetFilter(".").
-		AddInfoFromString(fields[7])
+		SetQual(fields[5]).
+		SetFilter(fields[6]).
+		AddInfoFromString(fields[7]), nil
 }

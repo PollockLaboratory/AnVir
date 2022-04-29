@@ -235,7 +235,6 @@ func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex // for concurrent writes to output
-	lines := make(chan string) // for concurrent reading of variants
 
 	// load the reference into windowed and contiguous query structures
 	windowed_ref := fastaseq.LoadWindowedReference(ref_fasta, k)
@@ -260,17 +259,10 @@ func GetVariants(variants_file string, ref_fasta string, k int, out *os.File) {
 	for i := 0; i <= N_HEADER; i++ {
 		scanner.Scan()
 	}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for scanner.Scan() {
-			lines <- scanner.Text()
-		}
-		close(lines)
-	} ()
  
 	// Parse the variants file, classify, write to vcf (stdout)
-	for text := range lines {
+	for scanner.Scan() {
+		text := scanner.Text()
 		wg.Add(1)
 		go func(text string) {
 			defer wg.Done()

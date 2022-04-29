@@ -1,15 +1,17 @@
 package vcf_test
 
 import (
+	// "bufio"
 	"bytes"
-	"os"
+	// "fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 
-	"annotation/vcf"
 	. "annotation/utils"
+	"annotation/vcf"
 )
 
 func compare[T any](result T, correct T, t *testing.T) {
@@ -85,4 +87,23 @@ func TestParseVCFRecord(t *testing.T) {
 			"CTAGGCATTGATTT", "TAGGCATTGATTTA", "AGGCATTGATTTAG",
 			"GGCATTGATTTAGA")
 	compare(*result, *correct, t)
+}
+
+func TestParseVCFHeader(t *testing.T) {
+	correct := vcf.Header{
+		Reference: "blah",
+		Contigs: []vcf.ContigHeader{{ID: "testchr", Length:10}},
+		Info: []vcf.InfoHeader{
+			{ID: "TEST1", Number: ".", Type: "String", Description: "test1 field"},
+			{ID: "TEST2", Number: "1", Type: "Integer", Description: "test2 field"},
+		},
+	}
+
+	f, err := os.Open("test.vcf")
+	Check(err)
+	result := vcf.ParseVCFHeader(f)
+	compare(*result, correct, t)
+	// parse the header
+	// compare the header values with correct
+	// check if next line is the first vcf record
 }
