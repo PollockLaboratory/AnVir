@@ -69,9 +69,13 @@ func LineCount(filename string) int {
 }
 
 
-// max of two ints because of course its not in the standard lib
-func max(a int, b int) int {
+// min/max of two ints because of course its not in the standard lib
+func Max(a int, b int) int {
 	if a > b { return a }
+	return b
+}
+func Min(a int, b int) int {
+	if a < b { return a }
 	return b
 }
 

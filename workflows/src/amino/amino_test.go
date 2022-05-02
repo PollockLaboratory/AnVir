@@ -56,14 +56,29 @@ func TestCodonPos(t *testing.T) {
 }
 
 func TestCodonRange(t *testing.T) {
-	// 1  4  7  10 13 16 19
+	// Example for tests
+	// 5  8  11 14 17 20 23
     // v  v  v  v  v  v  v
 	// |||___|||___|||___|||
 	//  0  1  2  3  4  5  6
-	r1, r2 := CodonRange(1, 5, 13)
-	c1, c2 := 1, 4
-	compare(r1, c1, t)
-	compare(r2, c2, t)
+	t.Run("case:within_gene;9-17", func(t *testing.T) {
+		r1, r2 := CodonRange(5, 25, 9, 17)
+		c1, c2 := 1, 4
+		compare(r1, c1, t)
+		compare(r2, c2, t)
+	})
+	t.Run("case:v_start_before_gene;4-17", func(t *testing.T) {
+		r1, r2 := CodonRange(5, 25, 4, 17)
+		c1, c2 := 0, 4
+		compare(r1, c1, t)
+		compare(r2, c2, t)
+	})
+	t.Run("case:v_end_after_gene;14-27", func(t *testing.T) {
+		r1, r2 := CodonRange(5, 25, 14, 27)
+		c1, c2 := 3, 6
+		compare(r1, c1, t)
+		compare(r2, c2, t)
+	})
 }
 
 func TestCodonIndex2Genomic(t *testing.T) {
@@ -225,21 +240,105 @@ func TestDNA2AminoAcid(t *testing.T) {
 	t.Run("divisible by 3", func(t *testing.T) {
 		dna := "TTTTTGTTCTTATGTTGG"
 		correct := "FLFLCW"
-		result := DNA2AminoAcid(dna, codon_table)
+		result, _ := DNA2AminoAcid(dna, codon_table)
 		compare(result, correct, t)
 	})
 	t.Run("not divisible by 3", func(t *testing.T) {
 		dna := "TTTTTGTTCTTATGTTG"
 		correct := "FLFLC"
-		result := DNA2AminoAcid(dna, codon_table)
+		result, _ := DNA2AminoAcid(dna, codon_table)
 		compare(result, correct, t)
 	})
 }
 
-func TestAnnotateChanges(t *testing.T) {
-	// TODO create small synthetic data
+/// TODO
+func TestGetGeneIntervals(t *testing.T) {
+
+}
+
+func TestGetChanges(t *testing.T) {
+	t.Run("case_single_AA_changed", func(t *testing.T) {
+		ref_aa := "F"
+		alt_aa := "L"
+		cstart := 5
+		result := GetChanges(ref_aa, alt_aa, cstart)
+		correct := []Change{{From: "F", To: "L", At: 5}}
+		compare(result, correct, t)
+	})
+	t.Run("case_single_AA_no_change", func(t *testing.T) {
+		ref_aa := "F"
+		alt_aa := "F"
+		cstart := 5
+		result := GetChanges(ref_aa, alt_aa, cstart)
+		correct := []Change{}
+		compare(result, correct, t)
+	})
+	t.Run("case_del_all", func(t *testing.T) {
+		ref_aa := "YES"
+		alt_aa := ""
+		cstart := 5
+		result := GetChanges(ref_aa, alt_aa, cstart)
+		correct := []Change{
+			{From: "Y", To: "del", At: 5},
+			{From: "E", To: "del", At: 6},
+			{From: "S", To: "del", At: 7},
+		}
+		compare(result, correct, t)
+	})
+	t.Run("case_ins_all", func(t *testing.T) {
+		
+		ref_aa := ""
+		alt_aa := "YES"
+		cstart := 5
+		result := GetChanges(ref_aa, alt_aa, cstart)
+		correct := []Change{
+			{From: "ins", To: "Y", At: 5},
+			{From: "ins", To: "E", At: 5},
+			{From: "ins", To: "S", At: 5},
+		}
+		compare(result, correct, t)
+	})
+	t.Run("compound1", func(t *testing.T) {
+		// 56789
+		// ARNDCQE
+		// AB--RTE
+		ref_aa := "ARNDCQE"
+		alt_aa := "AB--RTE"
+		cstart := 5
+		result := GetChanges(ref_aa, alt_aa, cstart)
+		correct := []Change{
+			{From: "R", To: "B", At: 6},
+			{From: "N", To: "del", At: 7},
+			{From: "D", To: "del", At: 8},
+			{From: "C", To: "R", At: 9},
+			{From: "Q", To: "T", At: 10},
+		}
+		compare(result, correct, t)
+	})
+	t.Run("compound2", func(t *testing.T) {
+		//         56--789
+		ref_aa := "AB--RTE"
+		alt_aa := "ARNDCQE"
+		cstart := 5
+		result := GetChanges(ref_aa, alt_aa, cstart)
+		correct := []Change{
+			{From: "B", To: "R", At: 6},
+			{From: "ins", To: "N", At: 6},
+			{From: "ins", To: "D", At: 6},
+			{From: "R", To: "C", At: 7},
+			{From: "T", To: "Q", At: 8},
+		}
+		compare(result, correct, t)
+	})
+
+}
+
+func BenchmarkAnnotateChanges(t *testing.B) {
 	ref_fasta := "../../data/NC_045512.2.fasta"
-	vcf_file := "../classify_variants/test_data/benchmark.vcf"
+	vcf_file := "../../output/variants_genes.vcf"
 	outfile := "test_data/out.vcf"
-	AnnotateChanges(ref_fasta, vcf_file, outfile)
+	genes_bed := "../../data/genes.bed.gz"
+	codons_file := "../../data/dna_codon_table.tsv"
+	AnnotateChanges(ref_fasta, vcf_file,
+		genes_bed, codons_file, outfile)
 }
