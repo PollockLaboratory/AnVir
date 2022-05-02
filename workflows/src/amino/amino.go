@@ -35,6 +35,9 @@ func formatChanges(changes []Change) string{
 	for i := range changes {
 		change_strings = append(change_strings, changes[i].str())
 	}
+	if len(change_strings) == 0 {
+		return "."
+	}
 	return strings.Join(change_strings, ",")
 }
 
@@ -229,7 +232,7 @@ func DNA2AminoAcid(dna string, codon_table map[string]byte) (string, bool) {
 // aa sequences. 
 /// Inputs:
 // ref_aa, alt_aa: ref/variant aa sequences
-// cstart: codon start pos (1-based)
+// cstart: codon start pos (0-based).
 /// Returns:
 // slice of changes: each change object consists of
 // from: orig aa, to: changed aa, at: codon number (1-based)
@@ -241,17 +244,17 @@ func GetChanges(ref_aa , alt_aa string, cstart int) []Change {
 	if n_ref == 0 { // purely novel inserted aa's
 		for i := range alt_aa {
 			changes = append(changes,
-				Change{From: "ins", To: string(alt_aa[i]), At: cstart})
+				Change{From: "ins", To: string(alt_aa[i]), At: cstart + 1})
 		}
 	} else if n_alt == 0 { // all ref aa's deleted
 		for i := range ref_aa {
 			changes = append(changes,
-				Change{From: string(ref_aa[i]), To: "del", At: cstart + i})
+				Change{From: string(ref_aa[i]), To: "del", At: cstart + i + 1})
 		}
 	} else if n_ref == 1 && n_alt == 1 {
 		if ref_aa != alt_aa {
 			changes = append(changes, Change{
-				From: ref_aa, To: alt_aa, At: cstart})
+				From: ref_aa, To: alt_aa, At: cstart + 1})
 		}
 	} else {
 		// align ref/alt aa
@@ -265,17 +268,17 @@ func GetChanges(ref_aa , alt_aa string, cstart int) []Change {
 				// offset remains the same for next iter
 				changes = append(changes,
 					Change{From: "ins", To: string(alt_align[i]),
-						At: cstart + offset - 1})
+						At: cstart + offset})
 			} else if alt_align[i] == '-' { // deleted AA
 				changes = append(changes,
 					Change{From: string(ref_align[i]),
-						To: "del", At: cstart + offset})
+						To: "del", At: cstart + offset + 1})
 				offset++
 			} else { 
 				if ref_align[i] != alt_align[i] { // substitution
 					changes = append(changes,
 						Change{From: string(ref_align[i]),
-							To: string(alt_align[i]), At: cstart + offset})
+							To: string(alt_align[i]), At: cstart + offset + 1})
 				}
 				offset++
 			}

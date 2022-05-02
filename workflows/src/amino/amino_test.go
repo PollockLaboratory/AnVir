@@ -9,8 +9,10 @@ import (
 	"testing"
 
 	. "annotation/amino"
+	"annotation/fastaseq"
 	. "annotation/fastaseq"
 	. "annotation/utils"
+	"annotation/vcf"
 )
 
 func compare[T any](result T, correct T, t *testing.T) {
@@ -262,7 +264,7 @@ func TestGetChanges(t *testing.T) {
 		alt_aa := "L"
 		cstart := 5
 		result := GetChanges(ref_aa, alt_aa, cstart)
-		correct := []Change{{From: "F", To: "L", At: 5}}
+		correct := []Change{{From: "F", To: "L", At: 6}}
 		compare(result, correct, t)
 	})
 	t.Run("case_single_AA_no_change", func(t *testing.T) {
@@ -279,22 +281,21 @@ func TestGetChanges(t *testing.T) {
 		cstart := 5
 		result := GetChanges(ref_aa, alt_aa, cstart)
 		correct := []Change{
-			{From: "Y", To: "del", At: 5},
-			{From: "E", To: "del", At: 6},
-			{From: "S", To: "del", At: 7},
+			{From: "Y", To: "del", At: 6},
+			{From: "E", To: "del", At: 7},
+			{From: "S", To: "del", At: 8},
 		}
 		compare(result, correct, t)
 	})
 	t.Run("case_ins_all", func(t *testing.T) {
-		
 		ref_aa := ""
 		alt_aa := "YES"
 		cstart := 5
 		result := GetChanges(ref_aa, alt_aa, cstart)
 		correct := []Change{
-			{From: "ins", To: "Y", At: 5},
-			{From: "ins", To: "E", At: 5},
-			{From: "ins", To: "S", At: 5},
+			{From: "ins", To: "Y", At: 6},
+			{From: "ins", To: "E", At: 6},
+			{From: "ins", To: "S", At: 6},
 		}
 		compare(result, correct, t)
 	})
@@ -307,11 +308,11 @@ func TestGetChanges(t *testing.T) {
 		cstart := 5
 		result := GetChanges(ref_aa, alt_aa, cstart)
 		correct := []Change{
-			{From: "R", To: "B", At: 6},
-			{From: "N", To: "del", At: 7},
-			{From: "D", To: "del", At: 8},
-			{From: "C", To: "R", At: 9},
-			{From: "Q", To: "T", At: 10},
+			{From: "R", To: "B", At: 7},
+			{From: "N", To: "del", At: 8},
+			{From: "D", To: "del", At: 9},
+			{From: "C", To: "R", At: 10},
+			{From: "Q", To: "T", At: 11},
 		}
 		compare(result, correct, t)
 	})
@@ -322,16 +323,83 @@ func TestGetChanges(t *testing.T) {
 		cstart := 5
 		result := GetChanges(ref_aa, alt_aa, cstart)
 		correct := []Change{
-			{From: "B", To: "R", At: 6},
-			{From: "ins", To: "N", At: 6},
-			{From: "ins", To: "D", At: 6},
-			{From: "R", To: "C", At: 7},
-			{From: "T", To: "Q", At: 8},
+			{From: "B", To: "R", At: 7},
+			{From: "ins", To: "N", At: 7},
+			{From: "ins", To: "D", At: 7},
+			{From: "R", To: "C", At: 8},
+			{From: "T", To: "Q", At: 9},
 		}
 		compare(result, correct, t)
 	})
-
 }
+
+func TestAminoAcidChanges(t *testing.T) {
+	
+	ref_fasta := "../../data/NC_045512.2.fasta"
+	genes_bed := "../../data/genes.bed.gz"
+	codons_file := "../../data/dna_codon_table.tsv"
+
+	ref := fastaseq.LoadContiguousReference(ref_fasta)
+	gene_intervals := GetGeneIntervals(genes_bed)
+	codon_table := GetCodonTable(codons_file)
+
+	// test case vcf records
+	SNP1 := "NC_045512.2	24499	3357	T	C	.	.	VARTYPE=SNP;END=24499;COUNT=3585;KMERS=AGTGTTTTAAATGA,GTGTTTTAAATGAC,TGTTTTAAATGACA,GTTTTAAATGACAT,TTTTAAATGACATC,TTTAAATGACATCC,TTAAATGACATCCT,TAAATGACATCCTT,AAATGACATCCTTT,AATGACATCCTTTC,ATGACATCCTTTCA,TGACATCCTTTCAC,GACATCCTTTCACG,ACATCCTTTCACGT,CATCCTTTCACGTC,ATCCTTTCACGTCT;GENE=S"
+	SNP2 := "NC_045512.2	22317	3361	G	T	.	.	VARTYPE=SNP;END=22317;COUNT=1281;KMERS=TTATTTGACTCCTG,TATTTGACTCCTGT,ATTTGACTCCTGTT,TTTGACTCCTGTTG,TTGACTCCTGTTGA,TGACTCCTGTTGAT,GACTCCTGTTGATT,ACTCCTGTTGATTC,CTCCTGTTGATTCT,TCCTGTTGATTCTT,CCTGTTGATTCTTC,CTGTTGATTCTTCT,TGTTGATTCTTCTT,GTTGATTCTTCTTC,TTGATTCTTCTTCA,TGATTCTTCTTCAG;GENE=S"
+	// DEL := "NC_045512.2	26158	3465	GTTA	DEL	.	.	VARTYPE=DEL;END=26161;COUNT=21688;KMERS=GTTCATCCGGAGTT,TTCATCCGGAGTTA,TCATCCGGAGTTAT,CATCCGGAGTTATC,ATCCGGAGTTATCC,TCCGGAGTTATCCA,CCGGAGTTATCCAG,CGGAGTTATCCAGT,GGAGTTATCCAGTA,GAGTTATCCAGTAA,AGTTATCCAGTAAT,GTTATCCAGTAATG,TTATCCAGTAATGG,TATCCAGTAATGGA,ATCCAGTAATGGAA;GENE=ORF3a;AACHANGES=255V>del,256N>del;FRAMESHIFT=true"
+	// INS := "NC_045512.2	22205	3505	INS	CGGCAGGCT	.	.	VARTYPE=INS;END=22206;COUNT=2149;KMERS=TAATTTAGTGCGTG,AATTTAGTGCGTGC,ATTTAGTGCGTGCG,TTTAGTGCGTGCGG,TTAGTGCGTGCGGC,TAGTGCGTGCGGCA,AGTGCGTGCGGCAG,GTGCGTGCGGCAGG,TGCGTGCGGCAGGC,GCGTGCGGCAGGCT,CGTGCGGCAGGCTA,GTGCGGCAGGCTAT,TGCGGCAGGCTATC,GCGGCAGGCTATCT,CGGCAGGCTATCTC,GGCAGGCTATCTCC,GCAGGCTATCTCCC,CAGGCTATCTCCCT,AGGCTATCTCCCTC,GGCTATCTCCCTCA,GCTATCTCCCTCAG,CTATCTCCCTCAGG,TATCTCCCTCAGGG,ATCTCCCTCAGGGT;GENE=S"
+	// COMPOUND_DEL := "NC_045512.2	28273	108	ATGTCTGAT	-TGTCTCTA	.	.	VARTYPE=COMPOUND;END=28283;COUNT=1060102;KMERS=ACGAACAAACTAAA,CGAACAAACTAAAT,GAACAAACTAAATG,AACAAACTAAATGT,ACAAACTAAATGTC,CAAACTAAATGTCT,AAACTAAATGTCTC,AACTAAATGTCTCT,ACTAAATGTCTCTA,CTAAATGTCTCTAA,TAAATGTCTCTAAA,AAATGTCTCTAAAT,AATGTCTCTAAATG,ATGTCTCTAAATGG,TGTCTCTAAATGGA,GTCTCTAAATGGAC,TCTCTAAATGGACC,CTCTAAATGGACCC,TCTAAATGGACCCC,CTAAATGGACCCCA,TAAATGGACCCCAA,AAATGGACCCCAAA,AATGGACCCCAAAA;GENE=N"
+	// COMPOUND_INS := "NC_045512.2	11082	5381	G---	TTTT	.	.	VARTYPE=COMPOUND;END=11084;COUNT=445;KMERS=TTGTTCTTTTTTTT,TGTTCTTTTTTTTT,GTTCTTTTTTTTTT,TTCTTTTTTTTTTT,TCTTTTTTTTTTTT,CTTTTTTTTTTTTT,TTTTTTTTTTTTTA,TTTTTTTTTTTTAT,TTTTTTTTTTTATG,TTTTTTTTTTATGA,TTTTTTTTTATGAA,TTTTTTTTATGAAA,TTTTTTTATGAAAA,TTTTTTATGAAAAT,TTTTTATGAAAATG,TTTTATGAAAATGC,TTTATGAAAATGCC,TTATGAAAATGCCT,TATGAAAATGCCTT;GENE=ORF1a"
+	// COMPOUND_SNP := "NC_045512.2	28874	3413	GCAGTAGGGGAAC	TCAGTAGGGGAAT	.	.	VARTYPE=COMPOUND;END=28888;COUNT=2809;KMERS=TTCAACTCCAGGCA,TCAACTCCAGGCAT,CAACTCCAGGCATC,AACTCCAGGCATCA,ACTCCAGGCATCAG,CTCCAGGCATCAGT,TCCAGGCATCAGTA,CCAGGCATCAGTAG,CAGGCATCAGTAGG,AGGCATCAGTAGGG,GGCATCAGTAGGGG,GCATCAGTAGGGGA,CATCAGTAGGGGAA,ATCAGTAGGGGAAT,TCAGTAGGGGAATT,CAGTAGGGGAATTT,AGTAGGGGAATTTC,GTAGGGGAATTTCT,TAGGGGAATTTCTC,AGGGGAATTTCTCC,GGGGAATTTCTCCT,GGGAATTTCTCCTG,GGAATTTCTCCTGC,GAATTTCTCCTGCT,AATTTCTCCTGCTA,ATTTCTCCTGCTAG,TTTCTCCTGCTAGA,TTCTCCTGCTAGAA;GENE=N"
+
+	t.Run("SNP1", func(t *testing.T) {
+		// SNP occurs at pos 24499 in gene S.
+		// S starts at 21563 (1-based).
+		// Codon offset is (24499-21563)/3 = 978.  
+		//
+		// Relative offset pos in the codon is 
+		// (24499-21563)%3 = 2 ie last pos in the codon
+		// 
+		// Codon ref seq is ref(start:24497, end:24499) = GAT
+		//
+		// Ref = T, Alt = C -- Alt Codon seq = GAC
+		// ref AA is D
+		// alt AA is D ==> no change
+
+		rec, err := vcf.ParseVCFRecord(SNP1)
+		Check(err)
+
+		res_changes, res_frameshift :=
+			AminoAcidChanges(ref, rec, gene_intervals, codon_table)
+		corr_changes, corr_frameshift := ".", "false"
+		compare(res_changes, corr_changes, t)
+		compare(res_frameshift, corr_frameshift, t)
+	})
+	t.Run("SNP2", func(t *testing.T) {
+		// SNP occurs at pos 22317 in gene S.
+		// S starts at 21563 (1-based).
+		// Codon offset is (22317-21563)/3 = 251.  
+		//
+		// Relative offset pos in the codon is 
+		// (22317-21563)%3 = 1 ie middle pos in codon
+		// 
+		// Codon ref seq is ref(start:22316, end:22318) = GGT
+		//
+		// Ref = G, Alt = T -- Alt Codon seq = GTT
+		// ref AA is G
+		// alt AA is V ==> 1-based codon notation 252G>V
+
+		rec, err := vcf.ParseVCFRecord(SNP2)
+		Check(err)
+
+		res_changes, res_frameshift :=
+			AminoAcidChanges(ref, rec, gene_intervals, codon_table)
+		corr_changes, corr_frameshift := "252G>V", "false"
+		compare(res_changes, corr_changes, t)
+		compare(res_frameshift, corr_frameshift, t)
+	})
+}
+
 
 func BenchmarkAnnotateChanges(t *testing.B) {
 	ref_fasta := "../../data/NC_045512.2.fasta"
