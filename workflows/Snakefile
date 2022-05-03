@@ -23,7 +23,6 @@ rule ClassifyVariants:
         variants = variants,
     output:
         f"{outdir}/{prefix}_classified_variants.vcf"
-    # TODO conda: 
     threads: workflow.cores
     shell:
         f"""
@@ -40,7 +39,8 @@ rule AnnotateGenes:
         genes = genes
     output:
         f"{outdir}/{prefix}_variants_genes.vcf"
-    # TODO conda:
+    conda:
+        "env/bcftools.yaml"
     shell:
         """
         bcftools annotate -a {input.genes} \\
