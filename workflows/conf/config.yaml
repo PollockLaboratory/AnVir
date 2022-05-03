@@ -1,0 +1,21 @@
+# Replace with values specific to your system
+# relative paths are w.r.t. the snakefile path
+
+# TODO create a data directory
+reference: "data/NC_045512.2.fasta"
+
+# TODO eventually this will be a product of the pipeline
+# and will be replaced with the raw sequence data
+variants: "data/variants7M_3500Mline_7.64Mgenomes_min100.tsv"
+
+# bed file containing gene intervals
+genes: "data/genes.bed.gz"
+
+# path to codons table
+codons: "data/dna_codon_table.tsv"
+
+outdir: "output"
+
+# string to prepend to output files
+output_prefix: "test"
+  

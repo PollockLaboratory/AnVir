@@ -11,10 +11,27 @@ import (
 	"strconv"
 	"strings"
 
+	arg "github.com/alexflint/go-arg"
+
 	"annotation/fastaseq"
 	. "annotation/utils"
 	"annotation/vcf"
 )
+
+
+type cliargs struct {
+	Reference string `arg:"--reference,required,help:Reference fasta."`
+	VCF  string `arg:"--vcf,required,help:Input vcf."`
+	Genes   string `arg:"--genes,required,help:.bed.gz list of genes"`
+	Codons string `arg:"--codons,required,help:tab separated table of DNA codon to amino acid mapping."`
+	Outfile   string `arg:"--outfile,required,help:Output vcf"`
+}
+// TODO better description
+func (c cliargs) Description() string {
+	return "Annotate variants with amino acid changes if applicable"
+}
+
+
 
 type Change struct {
 	From string
@@ -296,11 +313,21 @@ func AminoAcidChanges(ref *fastaseq.ContiguousReference, record *vcf.Record,
 	pos := record.Pos
 	ref_seq := record.Ref
 	alt_seq := record.Alt
+	// println("")
+	// println("============================================================")
+	// println("ref_seq: ", ref_seq)
+	// println("alt_seq: ", alt_seq)
+	// println("------------------------------------------------------------")
 	end , _:= strconv.Atoi(record.Info["END"][0])
 
 	gene := record.Info["GENE"][0]
 	gstart := gene_intervals[gene].Start
 	gend := gene_intervals[gene].End
+	// println("gstart: ", gstart)
+	// println("gend: ", gend)
+	// println("pos: ", pos)
+	// println("end: ", end)
+	// println("------------------------------------------------------------")
 
 	// Get codon index range
 	// TODO right now do limited range of codons.
@@ -309,6 +336,9 @@ func AminoAcidChanges(ref *fastaseq.ContiguousReference, record *vcf.Record,
 	// Luckily, none of the logic after this ought 
 	// to change if I decide to go that route.
 	cstart, cend := CodonRange(gstart, gend, pos, end)
+	// println("cstart: ", cstart)
+	// println("cend: ", cend)
+	// println("------------------------------------------------------------")
 
 	// get refseq spanning the codons
 	ref_codons := CodonSeq(ref, gstart, cstart , cend)
@@ -319,9 +349,6 @@ func AminoAcidChanges(ref *fastaseq.ContiguousReference, record *vcf.Record,
 	// applied variants to the codon seq
 	// record.Write(os.Stdout)
 	var alt_codons string
-	// fmt.Println("-------------------------------------------")
-	// fmt.Println(record.Info["VARTYPE"])
-	// fmt.Println("-------------------------------------------")
 	switch record.Info["VARTYPE"][0] {
 	case "SNP":
 		alt_codons = ApplySNP(ref_codons, var_codon_pos, alt_seq[0])
@@ -332,6 +359,9 @@ func AminoAcidChanges(ref *fastaseq.ContiguousReference, record *vcf.Record,
 	case "COMPOUND":
 		alt_codons = ApplyCompound(ref_codons, var_codon_pos, ref_seq, alt_seq)
 	}
+	// println("ref_codon: ", ref_codons)
+	// println("alt_codon: ", alt_codons)
+	// println("------------------------------------------------------------")
 	var frameshift string
 	if len(alt_codons) % 3 != 0 {
 		// TODO someday find the start of shifted reading frame
@@ -343,6 +373,9 @@ func AminoAcidChanges(ref *fastaseq.ContiguousReference, record *vcf.Record,
 	// get amino acid sequence of ref/alt
 	ref_aa , _:= DNA2AminoAcid(ref_codons, codon_table)
 	alt_aa , ok := DNA2AminoAcid(alt_codons, codon_table)
+	// println("ref_aa: ", ref_aa)
+	// println("alt_aa: ", alt_aa)
+	// println("------------------------------------------------------------")
 	if ok {
 		// get list of changes
 		changes := GetChanges(ref_aa, alt_aa, cstart)
@@ -392,14 +425,12 @@ func AnnotateChanges(ref_fasta string, vcf_file string,
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "**Warning**:%s\n**SKIPPING**\n\n", err)
 				continue
-			}
-			// record.Write(os.Stdout)
-			
-			if _, ok := record.Info["GENE"]; !ok {
+			} else if _, ok := record.Info["GENE"]; !ok {
 				// didn't intersect with gene
-				record.AddInfo("GENE", ".")
-				record.AddInfo("AACHANGES", ".")
-				record.AddInfo("FRAMESHIFT", ".")
+				record.AddInfo("GENE", ".").
+					AddInfo("AACHANGES", ".").
+					AddInfo("FRAMESHIFT", ".").
+					Write(out)
 			} else {
 				change_string, frameshift := AminoAcidChanges(
 					ref, record, gene_intervals, codon_table)
@@ -409,4 +440,26 @@ func AnnotateChanges(ref_fasta string, vcf_file string,
 			}
 		}
 	}
+}
+
+func Main() {
+	cli := cliargs{}
+	arg.MustParse(&cli)
+
+	outpath, err := filepath.Abs(cli.Outfile)
+	Check(err)
+
+	vcfpath, err := filepath.Abs(cli.VCF)
+	Check(err)
+
+	genespath, err := filepath.Abs(cli.Genes)
+	Check(err)
+
+	codonspath, err := filepath.Abs(cli.Codons)
+	Check(err)
+
+	refpath, err := filepath.Abs(cli.Reference)
+	Check(err)
+
+	AnnotateChanges(refpath, vcfpath, genespath, codonspath, outpath)
 }

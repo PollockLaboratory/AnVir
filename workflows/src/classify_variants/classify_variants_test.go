@@ -58,11 +58,6 @@ func TestMergeDeviants(t *testing.T) {
 // ============================================================================
 /// Full Variant Classification test
 // ============================================================================
-// TODO what if I have inserted seq that is same as prev/next? it shouldnt occur,
-//      because it wouldnt be a deviant sequence (it maps to the ref)
-// TODO does the variant caller have the ability to detect tandem duplications?
-// TODO do some brainstorming and add a case in the classify variant package if needed
-
 
 // Test variant classification functionality on a toy dataset.
 // See ./test_data/notes.org for information/reason on test cases.
@@ -140,6 +135,8 @@ func TestClassifyVariant(t *testing.T) {
 			t.Errorf("\nCORRECT:\n%s\nRESULT\n%s", correct, result)
 		}
 	})
+
+
 	/// Compound variants ---------------------------------------
 	/// TODO change tests because new aligner is case insensitive
 	// NOTE: technically for a really complex variant (may never occur),

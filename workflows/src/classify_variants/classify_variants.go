@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-
-	// "runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,7 +31,7 @@ type cliargs struct {
 	K         int    `arg:"--k,required,help:kmer length"`
 }
 func (c cliargs) Description() string {
-	return "Classify variants provided in {variants} with respect to the {reference}.  Output vcf is writen to stdout."
+	return "Classify variants provided in {variants} with respect to the {reference}."
 }
 
 
@@ -171,7 +169,7 @@ func ClassifyVariant(id string, count string, variant_seq []string, k int,
 					anchors.Fst.End + 1, anchors.Snd.Start - 1),
 				alt_allele: "DEL",
 			})
-		} else if n_deviants < k {
+		} else if n_deviants < k && ref_distance <= 0 {
 			/// DEL of repeated sequence
 			// TODO test further
 			// for example:

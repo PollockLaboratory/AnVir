@@ -1,31 +1,37 @@
 import sys
 
 configfile: 'conf/config.yaml'
-reference = config['reference']
-variants = config['variants']
-genes = config['genes']
-outdir = config['outdir']
+reference = os.path.abspath(config['reference'])
+variants = os.path.abspath(config['variants'])
+genes = os.path.abspath(config['genes'])
+codons = os.path.abspath(config['codons'])
+outdir = os.path.abspath(config['outdir'])
+prefix = config['output_prefix']
+
+if sys.platform == "linux":
+    anvir_bin = "bin/anvir_linux_amd64"
+elif sys.platform == "darwin":
+    anvir_bin = "bin/anvir_darwin_amd64"
 
 rule All:
     input:
-        f"{outdir}/variants_genes.vcf",
-        f"{outdir}/classified_variants.vcf"
+        f"{outdir}/{prefix}_aa_changes.vcf"
 
 rule ClassifyVariants:
     input:
         reference = reference,
         variants = variants,
     output:
-        f"{outdir}/classified_variants.vcf"
+        f"{outdir}/{prefix}_classified_variants.vcf"
     # TODO conda: 
     threads: workflow.cores
     shell:
-        """
-        bin/anvir classify --k 14 \\
-        --reference {input.reference} \\
-        --variants {input.variants} \\
-        --threads {threads} \\
-        --outfile {output} 
+        f"""
+        {anvir_bin} classify --k 14 \\
+        --reference {{input.reference}} \\
+        --variants {{input.variants}} \\
+        --threads {{threads}} \\
+        --outfile {{output}} 
         """
 
 rule AnnotateGenes:
@@ -33,7 +39,7 @@ rule AnnotateGenes:
         vcf = rules.ClassifyVariants.output,
         genes = genes
     output:
-        f"{outdir}/variants_genes.vcf"
+        f"{outdir}/{prefix}_variants_genes.vcf"
     # TODO conda:
     shell:
         """
@@ -44,4 +50,19 @@ rule AnnotateGenes:
         """
 
 rule GetAminoAcidChanges:
-        
+    input:
+        vcf = rules.AnnotateGenes.output,
+        genes = genes,
+        codons = codons,
+        ref = reference
+    output:
+        f"{outdir}/{prefix}_aa_changes.vcf"
+    shell:
+        f"""
+        {anvir_bin} amino \\
+        --reference {{input.ref}} \\
+        --vcf {{input.vcf}} \\
+        --genes {{input.genes}} \\
+        --codons {{input.codons}} \\
+        --outfile {{output}}
+        """

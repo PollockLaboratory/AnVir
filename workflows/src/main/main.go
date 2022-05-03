@@ -6,6 +6,7 @@ import (
 
 	// "github.com/valyala/fasttemplate"
 
+	"annotation/amino"
 	"annotation/classify_variants"
 	"annotation/queryposition"
 	"annotation/querywindow"
@@ -13,6 +14,7 @@ import (
 
 var subprograms = map[string]func(){
 	"classify": classify_variants.Main,
+	"amino": amino.Main,
 	"querywindow": querywindow.Main,
 	"queryposition": queryposition.Main,
 	// add more as we get more pieces
@@ -23,7 +25,7 @@ func printUsage() {
 anvir -- usage:
 Subprograms:
 	classify:    classify variants from raw deviant/anchor sequences
-	amino:       NOT IMPLEMENTED YET!
+	amino:       annotate variants in genes with amino acid changes that span the variant
     querywindow: sequence query reference to get genomic position of sequence
     queryposition: given genomic position, get sequence (1-based closed interval)
 `
