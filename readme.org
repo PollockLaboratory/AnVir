@@ -1,0 +1,38 @@
+#+TITLE: AnVir Annotation Pipeline
+
+* Installation
+The pipeline is run using [[https://snakemake.readthedocs.io/en/stable/][snakemake]].
+
+#+begin_src bash
+git clone https://github.com/PollockLaboratory/AnVir
+
+# replace this link with one appropriate for your operating system
+# https://docs.conda.io/en/latest/miniconda.html#latest-miniconda-installer-links
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+
+# drop in replacement for conda package manager
+# and the recommended way to install snakemake
+conda install -c conda-forge mamba
+
+# create a conda environment and install snakemake
+mamba create -c bioconda -c conda-forge -n snakemake snakemake
+#+end_src bash
+
+* Configuration
+To configure the pipeline go to =workflows/conf/config.yaml=.  Set the values:
+- *reference:* path to reference fasta.
+- *variants:* path to variants tab separated file (eventually superceded by GISAID sequence).
+- *genes:* path to genes =bed.gz= file this will already be included along with the required tabix index so it can remain unchanged.
+- *codons:* path to tab separated codons table.  Already included so it can remain unchanged
+- *outdir:* path to output directory of the pipeline
+- *output_prefix:* string to prepend to the output files
+
+
+* Running Pipeline
+In the workflows directory run:
+#+begin_src bash
+conda activate snakemake # if you haven't already
+snakemake -j 1 --use-conda --conda-frontend mamba 
+#+end_src bash
+
