@@ -4,12 +4,13 @@ import pygraphviz as pgv
 import argparse
 
 ### EDGES TO FIGURE ###
-# Simple script to parse output haplotype edges and draw network diagram from the output of the AnVir pipeline.
-# NOTE: The output file is read and parsed twice. The first parse just grabs the metadata required to filter
-# out nodes worth including in the diagram. The second read/parse reads all the edge data to construct the
-# network.
+# Simple script to parse haplotype network files and draw network diagrams from the output of the AnVir pipeline.
+# NOTE: In this script the output file is read and parsed twice, which is inefficient but works for the time being.
+# The first parse just grabs the metadata for each node which is used to select the name of the nodes that are worth
+# including in the diagram. The second read/parse reads all the specific edge infomation to construct the network.
 
-# AnVir Haplotype edges file configuration constants
+# Constants for AnVir haplotype network files
+# These constants map to the name of the column to the columns number within the input file.
 HEADER_SIZE = 2
 
 # INPUT COLUMN VALUES
@@ -22,7 +23,7 @@ COUNT = 1
 # BITSET - str - a list of the variants that define the haplotype e.g. { 1 3 17 }
 BITSET = 2
 
-# STATUS - str/enum - the existance of some nodes is inferred rather than observed directly, this status indicates whether
+# STATUS - str/enum - the existance of some haplotype nodes is inferred rather than observed directly, this status indicates whether
 # the node haplotype has been observed directlyi (key = orig) or not.
 STATUS = 3
 
@@ -59,7 +60,7 @@ def parse_haplo_node_row(row_elements):
 def read_nodes_from_file(file_name):
     """
     Parse input haplotype edges file to get metadata.
-    Returns list of dicts representing each node (keys are column names)
+    Returns a list of dicts representing each node (keys are column names)
     """
     with open(file_name, "r") as fh:
         lines = [line for line in fh.readlines()][HEADER_SIZE:]
@@ -70,8 +71,8 @@ def read_nodes_from_file(file_name):
 def parse_children_and_ancestors(edge_elements):
     """
     Returns an EDGES DICT representing the edges connected to a single haplotype node.
-    Contains two list (CHILDREN, ANCESTORS) of dicts (bitset, id) which represent the nodes at the other end of
-    the each edge.
+    Contains two lists (CHILDREN, ANCESTORS) of dicts (bitset, id) which represent the nodes at the other end of
+    the each edge connected to given haplotype node.
     """
     edges_at_node = {
         "CHILDREN" : [],
